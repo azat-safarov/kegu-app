@@ -423,10 +423,10 @@ async function loadStock(manual) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const text = await r.text();
     const rows = parseCSV(text);
-    // Извлекаем глобальное КЕТУ из ячейки G2 (если есть)
+    // Извлекаем глобальное КЕТУ из ячейки E2
     let globalKetu = 0;
-    if (rows[1] && rows[1][6]) {
-      globalKetu = Number(String(rows[1][6]).replace(/[\s,]/g, ''))||0;
+    if (rows[1] && rows[1][4]) {
+      globalKetu = Number(String(rows[1][4]).replace(/[\s,]/g, ''))||0;
     }
     S.ketuGlobal = globalKetu;
     localStorage.setItem('ketuGlobal', String(globalKetu));
