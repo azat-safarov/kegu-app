@@ -337,18 +337,17 @@ const SKU_LIST = [
 // ── API ──────────────────────────────────────
 async function api(params) {
   const url = S.url + '?' + new URLSearchParams(params);
-  const r = await fetch(url);
+  const r = await fetch(url, { redirect: 'follow' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 
 async function apiPost(body) {
-  const r = await fetch(S.url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    mode: 'cors',
-  });
+  // GET request to avoid CORS preflight block on Apps Script
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(body)) params.set(k, String(v));
+  const url = S.url + '?' + params.toString();
+  const r = await fetch(url, { redirect: 'follow' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
@@ -495,14 +494,12 @@ async function submit(type) {
   overlay(true, 'Сохраняю...');
 
   try {
-    const res = await apiPost({ action:'add', type, date, sku, qty, comment, keType: S.keType });
-    if (res.ok) {
-      toast(type==='income' ? '✓ Приход записан' : '✓ Расход записан', 'ok');
-      document.getElementById('fQty').value = '';
-      document.getElementById('fComment').value = '';
-      document.getElementById('fSku').selectedIndex = 0;
-      setKe('КЕГУ');
-    } else throw new Error(res.error||'unknown');
+    await apiPost({ action:'add', type, date, sku, qty, comment, keType: S.keType });
+    toast(type==='income' ? '✓ Приход записан' : '✓ Расход записан', 'ok');
+    document.getElementById('fQty').value = '';
+    document.getElementById('fComment').value = '';
+    document.getElementById('fSku').selectedIndex = 0;
+    setKe('КЕГУ');
   } catch(e) {
     toast('Ошибка: ' + e.message, 'err');
   } finally {
