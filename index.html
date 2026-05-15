@@ -335,7 +335,7 @@ const FORM_FIELDS = {
   keType:'entry.488368777', opType:'entry.1913492143', comment:'entry.819298286'
 };
 const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
-const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Отчет остатока кегу-кету');
+const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Остатки');
 
 const I18N = {
   ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—' },
@@ -451,7 +451,7 @@ async function submitToForm(entry) {
   fd.append(FORM_FIELDS.date_month, d.getMonth()+1);
   fd.append(FORM_FIELDS.date_day,   d.getDate());
   fd.append(FORM_FIELDS.sku,     entry.sku);
-  fd.append(FORM_FIELDS.qty,     entry.qty);
+  fd.append(FORM_FIELDS.qty,     entry.type === 'expense' ? -Math.abs(entry.qty) : entry.qty);
   fd.append(FORM_FIELDS.keType,  entry.keType);
   fd.append(FORM_FIELDS.opType,  entry.type === 'income' ? 'Приход' : 'Расход');
   fd.append(FORM_FIELDS.comment, (entry.comment || '') + (S.operator ? ' [' + S.operator + ']' : ''));
