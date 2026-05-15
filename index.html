@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#002B5C" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="КЕГУ·КЕТУ" />
+  <link rel="manifest" href="manifest.json" />
+  <title>КЕГУ / КЕТУ</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+    :root {
+      --bg:       #02152B;
+      --surface:  #0A2440;
+      --surface2: #0F3060;
+      --accent:   #00C6FF;
+      --blue:     #0080FF;
+      --green:    #00E096;
+      --red:      #FF4B4B;
+      --yellow:   #FFB800;
+      --text:     #E8F4FF;
+      --muted:    #6A90B8;
+      --border:   rgba(0,198,255,0.15);
+      --r:        14px;
+      --fh:       'Rajdhani', sans-serif;
+      --fb:       'Noto Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--fb);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-logo { font-family: var(--fh); font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
+    .topbar-logo span { color: var(--text); opacity: .7; }
+    .topbar-right { display: flex; gap: 8px; align-items: center; }
+    .icon-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; transition: all .2s;
+    }
+    .icon-btn:active { background: var(--surface2); color: var(--accent); }
+    .icon-btn.spinning svg { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sync-time { font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+    /* ── SETUP SCREEN ── */
+    #setup-screen {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 32px 24px; gap: 20px;
+      background: radial-gradient(ellipse at 50% 25%, rgba(0,128,255,0.12) 0%, transparent 65%);
+    }
+    #setup-screen.hidden, #app.hidden { display: none; }
+    .setup-icon { font-family: var(--fh); font-size: 52px; font-weight: 700; color: var(--accent); line-height: 1; letter-spacing: -1px; }
+    .setup-title { font-family: var(--fh); font-size: 17px; letter-spacing: 2px; color: var(--muted); }
+    .setup-desc { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; max-width: 300px; }
+
+    .url-input-wrap { width: 100%; max-width: 340px; }
+    .url-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .url-input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-family: var(--fb); font-size: 13px;
+      padding: 13px 14px; outline: none; transition: border-color .2s;
+    }
+    .url-input:focus { border-color: var(--accent); }
+    .url-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue), var(--accent));
+      color: #fff; border: none; border-radius: var(--r);
+      padding: 15px 28px; font-family: var(--fh); font-size: 18px; font-weight: 600;
+      letter-spacing: 1px; cursor: pointer; width: 100%; max-width: 340px;
+      box-shadow: 0 4px 20px rgba(0,198,255,0.25); transition: all .15s;
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: .5; pointer-events: none; }
+
+    /* ── MAIN APP ── */
+    #app { flex: 1; display: flex; flex-direction: column; }
+    .content { flex: 1; overflow-y: auto; padding: 14px 14px 4px; }
+
+    /* ── TABS ── */
+    .tabbar {
+      display: flex; background: var(--surface);
+      border-top: 1px solid var(--border);
+      position: sticky; bottom: 0; z-index: 100;
+    }
+    .tab {
+      flex: 1; padding: 9px 4px 13px; background: none; border: none;
+      color: var(--muted); font-family: var(--fb); font-size: 10px; letter-spacing: .3px;
+      cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: color .2s;
+    }
+    .tab svg { width: 21px; height: 21px; }
+    .tab.active { color: var(--accent); }
+
+    /* ── CARDS & FORMS ── */
+    .sec-title { font-family: var(--fh); font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 14px; letter-spacing: .4px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
+    .frow { margin-bottom: 13px; }
+    .flabel { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 6px; }
+    .finput, .fselect {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-family: var(--fb); font-size: 15px;
+      padding: 12px 14px; outline: none; transition: border-color .2s; -webkit-appearance: none;
+    }
+    .finput:focus, .fselect:focus { border-color: var(--accent); }
+    .fselect {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236A90B8' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px;
+    }
+    /* КЕГУ/КЕТУ toggle */
+    .ke-toggle { display: flex; gap: 8px; }
+    .ke-btn {
+      flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--muted); font-family: var(--fh); font-size: 16px;
+      font-weight: 700; letter-spacing: 1px; cursor: pointer; transition: all .18s; text-align: center;
+    }
+    .ke-btn.kegu { background: rgba(0,224,150,0.1); border-color: var(--green); color: var(--green); }
+    .ke-btn.ketu { background: rgba(0,128,255,0.1); border-color: var(--blue); color: var(--blue); }
+
+    .submit-btn {
+      width: 100%; padding: 15px; border: none; border-radius: var(--r);
+      font-family: var(--fh); font-size: 18px; font-weight: 700; letter-spacing: 1px;
+      cursor: pointer; transition: all .15s; margin-top: 4px;
+    }
+    .submit-btn.income { background: linear-gradient(135deg, #009060, var(--green)); color: #001a10; }
+    .submit-btn.expense { background: linear-gradient(135deg, #bb1c1c, var(--red)); color: #fff; }
+    .submit-btn:active { transform: scale(0.97); }
+    .submit-btn:disabled { opacity: .45; pointer-events: none; }
+
+    /* ── DASHBOARD ── */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 14px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 13px 14px; }
+    .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 5px; }
+    .stat-val { font-family: var(--fh); font-size: 26px; font-weight: 700; line-height: 1; }
+    .c-accent { color: var(--accent); }
+    .c-green  { color: var(--green);  }
+    .c-red    { color: var(--red);    }
+    .c-yellow { color: var(--yellow); }
+
+    .sku-list { border-radius: var(--r); overflow: hidden; border: 1px solid var(--border); }
+    .sku-row {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 11px 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .sku-row:last-child { border-bottom: none; }
+    .sku-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; padding-right: 10px; line-height: 1.4; }
+    .sku-val  { font-family: var(--fh); font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .ok   { color: var(--green);  }
+    .low  { color: var(--yellow); }
+    .none { color: var(--red);    }
+
+    /* ── HISTORY ── */
+    .hist-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 13px 14px; margin-bottom: 9px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .hdot { width: 9px; height: 9px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+    .hdot.income  { background: var(--green); }
+    .hdot.expense { background: var(--red);   }
+    .hinfo { flex: 1; }
+    .hsku  { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .hmeta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .hamt  { font-family: var(--fh); font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .hamt.income  { color: var(--green); }
+    .hamt.expense { color: var(--red);   }
+
+    /* filter chips */
+    .chips { display: flex; gap: 8px; margin-bottom: 14px; }
+    .chip {
+      padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); font-size: 13px;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .chip.active-income  { background: rgba(0,224,150,0.12); border-color: var(--green); color: var(--green); }
+    .chip.active-expense { background: rgba(255,75,75,0.12);  border-color: var(--red);   color: var(--red);   }
+    .chip.active-all     { background: rgba(0,198,255,0.12);  border-color: var(--accent); color: var(--accent); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%) translateY(16px);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 11px 18px; font-size: 13px; color: var(--text);
+      opacity: 0; transition: all .28s; pointer-events: none;
+      z-index: 300; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.45);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.ok   { border-color: var(--green); }
+    .toast.err  { border-color: var(--red);   }
+
+    /* ── LOADER ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(2,21,43,.75);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 400; gap: 14px; backdrop-filter: blur(4px);
+    }
+    .overlay.hidden { display: none; }
+    .ring { width: 46px; height: 46px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .75s linear infinite; }
+    .overlay-msg { color: var(--muted); font-size: 14px; }
+
+    .empty { text-align: center; color: var(--muted); padding: 48px 20px; font-size: 14px; line-height: 1.7; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="overlay hidden" id="overlay">
+  <div class="ring"></div>
+  <div class="overlay-msg" id="overlayMsg">Загрузка...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ── SETUP ── -->
+<div id="setup-screen">
+  <div class="setup-icon">КЕГУ<br><span style="color:var(--blue)">КЕТУ</span></div>
+  <div class="setup-title">УЧЁТ СТИКЕРОВ</div>
+  <div class="setup-desc">Вставьте ссылку на ваш Google Apps Script, чтобы подключить приложение к таблице.</div>
+
+  <div class="url-input-wrap">
+    <label class="url-label">URL Google Apps Script</label>
+    <textarea class="url-input" id="scriptUrl" rows="3"
+      placeholder="https://script.google.com/macros/s/XXXXXXX/exec" style="resize:none;line-height:1.5"></textarea>
+    <div class="url-hint">
+      Смотрите инструкцию — как получить эту ссылку в 3 шага.
+    </div>
+  </div>
+
+  <button class="btn-primary" id="connectBtn" onclick="connect()">Подключить</button>
+
+  <div style="font-size:12px;color:var(--muted);text-align:center;line-height:1.6;max-width:300px">
+    Все данные хранятся в вашей Google-таблице.<br>
+    Приложение не передаёт данные третьим лицам.
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app" class="hidden">
+
+  <div class="topbar">
+    <div class="topbar-logo">КЕГУ <span>/ КЕТУ</span></div>
+    <div class="topbar-right">
+      <span class="sync-time" id="syncTime"></span>
+      <button class="icon-btn" id="syncBtn" onclick="loadStock(true)" title="Обновить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
+          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="showSetup()" title="Настройки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <div class="tabbar">
+    <button class="tab active" id="tab-stock" onclick="switchTab('stock')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Остатки
+    </button>
+    <button class="tab" id="tab-income" onclick="switchTab('income')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      Приход
+    </button>
+    <button class="tab" id="tab-expense" onclick="switchTab('expense')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      Расход
+    </button>
+    <button class="tab" id="tab-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      История
+    </button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ───────────────────────────────────
+const S = {
+  url: localStorage.getItem('gasUrl') || 'https://script.google.com/macros/s/AKfycbzlsFvtNUHS5Nx8gjQiV9QNpeud7Q2eQsBH5gfQG0sCpNs-hgm6j-GZziaV2e3t1Nqi/exec',
+  tab: 'stock',
+  keType: 'КЕГУ',
+  stock: [],
+  histFilter: 'all',
+};
+
+const SKU_LIST = [
+  "PEPSI - 2.25L PET 6х","PEPSI - 1,75L PET 6x","PEPSI 2L PET 6x","PEPSI 1.5L PET 6x",
+  "PEPSI 1L PET 12x","PEPSI 0,5L PET 24x","PEPSI 0.26L PET 24x","PEPSI 0.25L NRGB 12x",
+  "PEPSI 0.25L CAN 24x","PEPSI 0.449L CAN 24x","PEPSI ZERO 0.25L CAN 24x","PEPSI ZERO 0.25L NRGB 12x",
+  "PEPSI ZERO 0.5L PET 12x","PEPSI ZERO 1,5L PET 6x","MIRINDA 0.25L CAN 24x","MIRINDA 0.25L NRGB 12x",
+  "MIRINDA ORANGE 0.5L PET 12x","MIRINDA ORANGE 1.5L PET 6x","MIRINDA ORANGE 1L PET 6x",
+  "7UP 0.25L CAN 24x","7UP 0.25L NRGB 12x","7UP 0.5L PET 12x","7UP 1.5L PET 6x","7UP 1L PET 6x",
+  "LIPTON зел Клубника 0.5L PET 12x","LIPTON зел Клубника 1L PET 6x","LIPTON зел Лимон 0.5L PET 12x",
+  "LIPTON зел Лимон 1.5L PET 6x","LIPTON зел Лимон 1L PET 6x","LIPTON чер Малина 0.5L PET 12x",
+  "LIPTON зел Персик 1L PET 6x","LIPTON чер Малина 1.5L PET 6x","LIPTON чер Малина 1L PET 6x",
+  "LIPTON чер Персик 0.5L PET 12x","LIPTON зел Персик 0.5L PET 12x","LIPTON чер Персик 1L PET 6x",
+  "LIPTON черный HF Манго 0.5L PET 12x","LIPTON черный HF Манго 1L PET 6x","MOUNTAIN DEW 0.25L CAN 24x",
+  "MOUNTAIN DEW 0.5L PET 12x","MOUNTAIN DEW 1L PET 6x","ADRENALINE RUSH 0.25L CAN 24x",
+  "ADRENALINE RUSH 0.449L CAN 24x","ADRENALINE RUSH MANGO 0.449L CAN 24x","ROCKSTAR ORIGINAL 0.25L CAN 24x",
+  "ROCKSTAR ORIGINAL 0.449L CAN 24x","ROCKSTAR Гуава 0.449L CAN 12x","ROCKSTAR Персик 0.449L CAN 24x",
+  "STING - 0.3L PET 24x","STING - 0,449L PET 24x","7UP Moxito 0.449 CAN x12",
+  "7UP Moxito 500ml PET x12","7UP Moxito 1L PET x6","Lipton Green Mango 500ml PET x12",
+  "Lipton Green Mango 1L PET x6","Lipton Green Mango 1,5L PET x6","Pepsi Twist 0,449 CAN x12",
+  "Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"
+];
+
+// ── API ──────────────────────────────────────
+async function api(params) {
+  const url = S.url + '?' + new URLSearchParams(params);
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function apiPost(body) {
+  const r = await fetch(S.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    mode: 'cors',
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── SETUP ────────────────────────────────────
+async function connect() {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url.includes('script.google.com')) {
+    toast('Вставьте правильную ссылку на Apps Script', 'err'); return;
+  }
+  S.url = url;
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true; btn.textContent = 'Проверяю...';
+  try {
+    const res = await api({ action: 'ping' });
+    if (res.ok) {
+      localStorage.setItem('gasUrl', url);
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      switchTab('stock');
+      await loadStock();
+    } else throw new Error('bad response');
+  } catch (e) {
+    toast('Не удалось подключиться. Проверьте URL.', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Подключить';
+  }
+}
+
+function showSetup() {
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('setup-screen').classList.remove('hidden');
+  document.getElementById('scriptUrl').value = S.url;
+}
+
+// ── STOCK ────────────────────────────────────
+async function loadStock(manual) {
+  overlay(true, 'Обновляю остатки...');
+  document.getElementById('syncBtn').classList.add('spinning');
+  try {
+    const res = await api({ action: 'stock' });
+    if (res.rows) {
+      S.stock = res.rows;
+      const t = new Date();
+      document.getElementById('syncTime').textContent =
+        t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0');
+    }
+    if (S.tab === 'stock') renderStock();
+    if (manual) toast('Данные обновлены', 'ok');
+  } catch(e) {
+    toast('Ошибка загрузки: ' + e.message, 'err');
+  } finally {
+    overlay(false);
+    document.getElementById('syncBtn').classList.remove('spinning');
+  }
+}
+
+function renderStock() {
+  const d = S.stock;
+  const total  = d.reduce((s,r) => s + (Number(r.kegu)||0), 0);
+  const withKe = d.filter(r => (Number(r.kegu)||0) > 0).length;
+  const noKe   = d.filter(r => (Number(r.kegu)||0) === 0).length;
+
+  const rows = d.length ? d.map(r => {
+    const k = Number(r.kegu)||0;
+    const cls = k===0 ? 'none' : (k < 20000 ? 'low' : 'ok');
+    return `<div class="sku-row">
+      <div class="sku-name">${r.name}</div>
+      <div class="sku-val ${cls}">${k===0 ? 'Нет' : k.toLocaleString('ru')}</div>
+    </div>`;
+  }).join('')
+  : `<div class="empty">Нажмите <b>⟳</b> для загрузки данных из таблицы</div>`;
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-title">Остатки КЕГУ</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-lbl">Всего КЕГУ</div><div class="stat-val c-accent">${total ? (total/1000).toFixed(0)+'K' : '—'}</div></div>
+      <div class="stat"><div class="stat-lbl">В наличии SKU</div><div class="stat-val c-green">${withKe}</div></div>
+      <div class="stat"><div class="stat-lbl">Нет КЕГУ</div><div class="stat-val c-red">${noKe}</div></div>
+      <div class="stat"><div class="stat-lbl">Всего SKU</div><div class="stat-val c-accent">${d.length || SKU_LIST.length}</div></div>
+    </div>
+    <div class="sec-title">По SKU</div>
+    <div class="sku-list">${rows}</div>`;
+}
+
+// ── FORM ─────────────────────────────────────
+function renderForm(type) {
+  S.keType = 'КЕГУ';
+  const inc = type === 'income';
+  const today = new Date().toISOString().slice(0,10);
+  const opts = SKU_LIST.map(s=>`<option value="${s}">${s}</option>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-title">${inc ? 'Приход стикеров' : 'Расход стикеров'}</div>
+    <div class="card">
+      <div class="frow">
+        <label class="flabel">Дата</label>
+        <input class="finput" type="date" id="fDate" value="${today}">
+      </div>
+      <div class="frow">
+        <label class="flabel">Продукт (SKU)</label>
+        <select class="fselect" id="fSku">
+          <option value="">— выберите продукт —</option>${opts}
+        </select>
+      </div>
+      <div class="frow">
+        <label class="flabel">Количество (стикеров)</label>
+        <input class="finput" type="number" id="fQty" placeholder="напр. 50000" inputmode="numeric" min="1">
+      </div>
+      <div class="frow">
+        <label class="flabel">КЕГУ / КЕТУ</label>
+        <div class="ke-toggle">
+          <button class="ke-btn kegu" id="keKegu" onclick="setKe('КЕГУ')">КЕГУ</button>
+          <button class="ke-btn" id="keKetu" onclick="setKe('КЕТУ')">КЕТУ</button>
+        </div>
+      </div>
+      <div class="frow">
+        <label class="flabel">Комментарий</label>
+        <input class="finput" type="text" id="fComment" placeholder="необязательно">
+      </div>
+      <button class="submit-btn ${type}" id="submitBtn" onclick="submit('${type}')">
+        ${inc ? '＋ Записать приход' : '－ Записать расход'}
+      </button>
+    </div>`;
+}
+
+function setKe(ke) {
+  S.keType = ke;
+  document.getElementById('keKegu').className = 'ke-btn' + (ke==='КЕГУ'?' kegu':'');
+  document.getElementById('keKetu').className = 'ke-btn' + (ke==='КЕТУ'?' ketu':'');
+}
+
+async function submit(type) {
+  const date    = document.getElementById('fDate').value;
+  const sku     = document.getElementById('fSku').value;
+  const qty     = Number(document.getElementById('fQty').value);
+  const comment = document.getElementById('fComment').value;
+
+  if (!sku)    { toast('Выберите продукт', 'err'); return; }
+  if (!qty||qty<=0) { toast('Укажите количество', 'err'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  overlay(true, 'Сохраняю...');
+
+  try {
+    const res = await apiPost({ action:'add', type, date, sku, qty, comment, keType: S.keType });
+    if (res.ok) {
+      toast(type==='income' ? '✓ Приход записан' : '✓ Расход записан', 'ok');
+      document.getElementById('fQty').value = '';
+      document.getElementById('fComment').value = '';
+      document.getElementById('fSku').selectedIndex = 0;
+      setKe('КЕГУ');
+    } else throw new Error(res.error||'unknown');
+  } catch(e) {
+    toast('Ошибка: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    overlay(false);
+  }
+}
+
+// ── HISTORY ──────────────────────────────────
+async function renderHistory() {
+  overlay(true, 'Загружаю историю...');
+  try {
+    const filter = S.histFilter;
+    let rows = [];
+    if (filter === 'all' || filter === 'income') {
+      const r = await api({ action:'history', type:'income' });
+      rows = rows.concat((r.rows||[]).map(x=>({...x,type:'income'})));
+    }
+    if (filter === 'all' || filter === 'expense') {
+      const r = await api({ action:'history', type:'expense' });
+      rows = rows.concat((r.rows||[]).map(x=>({...x,type:'expense'})));
+    }
+    rows.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const items = rows.length
+      ? rows.map(e => {
+          const sign = e.type==='income' ? '+' : '−';
+          return `<div class="hist-item">
+            <div class="hdot ${e.type}"></div>
+            <div class="hinfo">
+              <div class="hsku">${e.sku}</div>
+              <div class="hmeta">${e.date} · ${e.keType||''}${e.comment?' · '+e.comment:''}</div>
+            </div>
+            <div class="hamt ${e.type}">${sign}${Number(e.qty).toLocaleString('ru')}</div>
+          </div>`;
+        }).join('')
+      : '<div class="empty">Записей пока нет</div>';
+
+    document.getElementById('content').innerHTML = `
+      <div class="sec-title">История</div>
+      <div class="chips">
+        <div class="chip ${filter==='all'?'active-all':''}" onclick="setFilter('all')">Все</div>
+        <div class="chip ${filter==='income'?'active-income':''}" onclick="setFilter('income')">Приход</div>
+        <div class="chip ${filter==='expense'?'active-expense':''}" onclick="setFilter('expense')">Расход</div>
+      </div>
+      ${items}`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty">Ошибка загрузки: ${e.message}</div>`;
+  } finally {
+    overlay(false);
+  }
+}
+
+function setFilter(f) {
+  S.histFilter = f;
+  renderHistory();
+}
+
+// ── TABS ─────────────────────────────────────
+function switchTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+  if (tab === 'stock')   renderStock();
+  else if (tab === 'income')  renderForm('income');
+  else if (tab === 'expense') renderForm('expense');
+  else if (tab === 'history') renderHistory();
+}
+
+// ── UTILS ────────────────────────────────────
+function overlay(show, msg) {
+  document.getElementById('overlay').classList.toggle('hidden', !show);
+  if (msg) document.getElementById('overlayMsg').textContent = msg;
+}
+let toastTimer;
+function toast(msg, type='') {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  toastTimer = setTimeout(() => t.className = 'toast', 3200);
+}
+
+// ── INIT ─────────────────────────────────────
+// URL уже вшит — сразу открываем приложение
+document.getElementById('setup-screen').classList.add('hidden');
+document.getElementById('app').classList.remove('hidden');
+switchTab('stock');
+loadStock();
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
