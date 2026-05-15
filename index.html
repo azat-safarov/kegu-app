@@ -1,606 +1,629 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#002B5C" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="КЕГУ·КЕТУ" />
-  <link rel="manifest" href="manifest.json" />
-  <title>КЕГУ / КЕТУ</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="КЕГУ·КЕТУ">
+<link rel="manifest" href="manifest.json">
+<title>КЕГУ / КЕТУ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+:root[data-theme="light"] {
+  --bg: #F2F2F7; --bg-elevated: #FFFFFF; --separator: rgba(60,60,67,0.12);
+  --text: #000000; --text-secondary: #3C3C43; --text-tertiary: #8E8E93;
+  --accent: #007AFF; --green: #34C759; --red: #FF3B30; --orange: #FF9500;
+  --gray4: #D1D1D6; --gray5: #E5E5EA; --gray6: #F2F2F7;
+  --tab-bg: rgba(248,248,248,0.92); --shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --bg-elevated: #1C1C1E; --separator: rgba(84,84,88,0.34);
+  --text: #FFFFFF; --text-secondary: #EBEBF5; --text-tertiary: #8E8E93;
+  --accent: #0A84FF; --green: #30D158; --red: #FF453A; --orange: #FF9F0A;
+  --gray4: #3A3A3C; --gray5: #2C2C2E; --gray6: #1C1C1E;
+  --tab-bg: rgba(28,28,30,0.92); --shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
 
-    :root {
-      --bg:       #02152B;
-      --surface:  #0A2440;
-      --surface2: #0F3060;
-      --accent:   #00C6FF;
-      --blue:     #0080FF;
-      --green:    #00E096;
-      --red:      #FF4B4B;
-      --yellow:   #FFB800;
-      --text:     #E8F4FF;
-      --muted:    #6A90B8;
-      --border:   rgba(0,198,255,0.15);
-      --r:        14px;
-      --fh:       'Rajdhani', sans-serif;
-      --fb:       'Noto Sans', sans-serif;
-    }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  min-height: 100dvh; display: flex; flex-direction: column; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s;
+}
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* Header */
+.header {
+  background: var(--bg-elevated); border-bottom: 0.5px solid var(--separator);
+  padding: 14px 16px; padding-top: max(14px, env(safe-area-inset-top));
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.header-logo .sep { color: var(--text-tertiary); font-weight: 500; margin: 0 4px; }
+.header-right { display: flex; gap: 8px; }
+.icon-btn {
+  background: var(--gray6); border: none; color: var(--accent);
+  border-radius: 50%; width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s;
+}
+.icon-btn:active { transform: scale(0.9); background: var(--gray5); }
+.icon-btn svg { width: 18px; height: 18px; }
+.spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--fb);
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
+/* Setup */
+.setup {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px 24px; gap: 22px;
+}
+.setup.hidden { display: none; }
+.setup-logo {
+  width: 88px; height: 88px; border-radius: 22px;
+  background: linear-gradient(135deg, #007AFF, #5856D6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 700; color: #fff;
+  box-shadow: 0 10px 30px rgba(0,122,255,0.3); margin-bottom: 8px;
+}
+.setup-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; text-align: center; }
+.setup-sub { font-size: 15px; color: var(--text-tertiary); text-align: center; line-height: 1.5; max-width: 320px; }
+.setup-input-wrap { width: 100%; max-width: 340px; }
+.setup-input {
+  width: 100%; background: var(--bg-elevated); border: 1px solid var(--separator);
+  border-radius: 12px; color: var(--text); font-family: inherit; font-size: 17px;
+  padding: 14px 16px; outline: none; transition: border-color 0.2s; text-align: center;
+}
+.setup-input:focus { border-color: var(--accent); }
+.setup-input::placeholder { color: var(--text-tertiary); }
 
-    /* ── TOPBAR ── */
-    .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 12px 16px 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky; top: 0; z-index: 100;
-    }
-    .topbar-logo { font-family: var(--fh); font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--accent); }
-    .topbar-logo span { color: var(--text); opacity: .7; }
-    .topbar-right { display: flex; gap: 8px; align-items: center; }
-    .icon-btn {
-      background: none; border: 1px solid var(--border); color: var(--muted);
-      border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center;
-      justify-content: center; cursor: pointer; transition: all .2s;
-    }
-    .icon-btn:active { background: var(--surface2); color: var(--accent); }
-    .icon-btn.spinning svg { animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .sync-time { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.btn-primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 14px;
+  padding: 16px 28px; font-family: inherit; font-size: 17px; font-weight: 600;
+  cursor: pointer; width: 100%; max-width: 340px; transition: all 0.1s;
+}
+.btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.5; pointer-events: none; }
 
-    /* ── SETUP SCREEN ── */
-    #setup-screen {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 32px 24px; gap: 20px;
-      background: radial-gradient(ellipse at 50% 25%, rgba(0,128,255,0.12) 0%, transparent 65%);
-    }
-    #setup-screen.hidden, #app.hidden { display: none; }
-    .setup-icon { font-family: var(--fh); font-size: 52px; font-weight: 700; color: var(--accent); line-height: 1; letter-spacing: -1px; }
-    .setup-title { font-family: var(--fh); font-size: 17px; letter-spacing: 2px; color: var(--muted); }
-    .setup-desc { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.7; max-width: 300px; }
+/* App */
+#app { flex: 1; display: flex; flex-direction: column; }
+#app.hidden { display: none; }
+.content {
+  flex: 1; overflow-y: auto; padding: 16px 16px 12px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
 
-    .url-input-wrap { width: 100%; max-width: 340px; }
-    .url-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8px; display: block; }
-    .url-input {
-      width: 100%; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text); font-family: var(--fb); font-size: 13px;
-      padding: 13px 14px; outline: none; transition: border-color .2s;
-    }
-    .url-input:focus { border-color: var(--accent); }
-    .url-hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+/* Tab bar */
+.tabbar {
+  display: flex; background: var(--tab-bg);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-top: 0.5px solid var(--separator);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab {
+  flex: 1; padding: 8px 4px; background: none; border: none;
+  color: var(--text-tertiary); font-family: inherit; font-size: 10px; font-weight: 500;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: color 0.15s;
+}
+.tab svg { width: 26px; height: 26px; }
+.tab.active { color: var(--accent); }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--blue), var(--accent));
-      color: #fff; border: none; border-radius: var(--r);
-      padding: 15px 28px; font-family: var(--fh); font-size: 18px; font-weight: 600;
-      letter-spacing: 1px; cursor: pointer; width: 100%; max-width: 340px;
-      box-shadow: 0 4px 20px rgba(0,198,255,0.25); transition: all .15s;
-    }
-    .btn-primary:active { transform: scale(0.97); }
-    .btn-primary:disabled { opacity: .5; pointer-events: none; }
+/* Sections */
+.section-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin: 8px 4px 14px; }
+.section-label {
+  font-size: 13px; font-weight: 500; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 16px 6px;
+}
+.card-group {
+  background: var(--bg-elevated); border-radius: 14px; overflow: hidden;
+  margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.card-row {
+  padding: 13px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 0.5px solid var(--separator); min-height: 44px;
+}
+.card-row:last-child { border-bottom: none; }
 
-    /* ── MAIN APP ── */
-    #app { flex: 1; display: flex; flex-direction: column; }
-    .content { flex: 1; overflow-y: auto; padding: 14px 14px 4px; }
+/* Form */
+.form-row { padding: 12px 16px; border-bottom: 0.5px solid var(--separator); }
+.form-row:last-child { border-bottom: none; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 500; color: var(--text-tertiary);
+  margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.form-input, .form-select {
+  width: 100%; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: inherit; font-size: 17px; padding: 4px 0;
+  -webkit-appearance: none;
+}
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right center; padding-right: 24px;
+}
 
-    /* ── TABS ── */
-    .tabbar {
-      display: flex; background: var(--surface);
-      border-top: 1px solid var(--border);
-      position: sticky; bottom: 0; z-index: 100;
-    }
-    .tab {
-      flex: 1; padding: 9px 4px 13px; background: none; border: none;
-      color: var(--muted); font-family: var(--fb); font-size: 10px; letter-spacing: .3px;
-      cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
-      transition: color .2s;
-    }
-    .tab svg { width: 21px; height: 21px; }
-    .tab.active { color: var(--accent); }
+.segmented {
+  display: flex; background: var(--gray5); border-radius: 9px; padding: 2px; margin: 4px 0;
+}
+.seg-btn {
+  flex: 1; padding: 7px 8px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text); font-family: inherit;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.seg-btn.active {
+  background: var(--bg-elevated); font-weight: 600;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+}
 
-    /* ── CARDS & FORMS ── */
-    .sec-title { font-family: var(--fh); font-size: 19px; font-weight: 700; color: var(--accent); margin-bottom: 14px; letter-spacing: .4px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
-    .frow { margin-bottom: 13px; }
-    .flabel { display: block; font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 6px; }
-    .finput, .fselect {
-      width: 100%; background: var(--bg); border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text); font-family: var(--fb); font-size: 15px;
-      padding: 12px 14px; outline: none; transition: border-color .2s; -webkit-appearance: none;
-    }
-    .finput:focus, .fselect:focus { border-color: var(--accent); }
-    .fselect {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236A90B8' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px;
-    }
-    /* КЕГУ/КЕТУ toggle */
-    .ke-toggle { display: flex; gap: 8px; }
-    .ke-btn {
-      flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--bg); color: var(--muted); font-family: var(--fh); font-size: 16px;
-      font-weight: 700; letter-spacing: 1px; cursor: pointer; transition: all .18s; text-align: center;
-    }
-    .ke-btn.kegu { background: rgba(0,224,150,0.1); border-color: var(--green); color: var(--green); }
-    .ke-btn.ketu { background: rgba(0,128,255,0.1); border-color: var(--blue); color: var(--blue); }
+.submit-btn {
+  width: calc(100% - 32px); margin: 8px 16px 16px; padding: 14px;
+  border: none; border-radius: 14px; font-family: inherit;
+  font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.submit-btn.income { background: var(--green); color: #fff; }
+.submit-btn.expense { background: var(--red); color: #fff; }
+.submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+.submit-btn:disabled { opacity: 0.5; pointer-events: none; }
 
-    .submit-btn {
-      width: 100%; padding: 15px; border: none; border-radius: var(--r);
-      font-family: var(--fh); font-size: 18px; font-weight: 700; letter-spacing: 1px;
-      cursor: pointer; transition: all .15s; margin-top: 4px;
-    }
-    .submit-btn.income { background: linear-gradient(135deg, #009060, var(--green)); color: #001a10; }
-    .submit-btn.expense { background: linear-gradient(135deg, #bb1c1c, var(--red)); color: #fff; }
-    .submit-btn:active { transform: scale(0.97); }
-    .submit-btn:disabled { opacity: .45; pointer-events: none; }
+/* Dashboard */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat { background: var(--bg-elevated); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+.stat-label {
+  font-size: 12px; color: var(--text-tertiary); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px;
+}
+.stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.c-accent { color: var(--accent); } .c-green { color: var(--green); }
+.c-red { color: var(--red); } .c-orange { color: var(--orange); }
 
-    /* ── DASHBOARD ── */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 14px; }
-    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 13px 14px; }
-    .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 5px; }
-    .stat-val { font-family: var(--fh); font-size: 26px; font-weight: 700; line-height: 1; }
-    .c-accent { color: var(--accent); }
-    .c-green  { color: var(--green);  }
-    .c-red    { color: var(--red);    }
-    .c-yellow { color: var(--yellow); }
+.sku-name { font-size: 14px; font-weight: 500; flex: 1; padding-right: 12px; line-height: 1.35; }
+.sku-val { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.ok { color: var(--green); } .low { color: var(--orange); } .none { color: var(--red); }
 
-    .sku-list { border-radius: var(--r); overflow: hidden; border: 1px solid var(--border); }
-    .sku-row {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 11px 14px; display: flex; justify-content: space-between; align-items: center;
-    }
-    .sku-row:last-child { border-bottom: none; }
-    .sku-name { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; padding-right: 10px; line-height: 1.4; }
-    .sku-val  { font-family: var(--fh); font-size: 14px; font-weight: 700; white-space: nowrap; }
-    .ok   { color: var(--green);  }
-    .low  { color: var(--yellow); }
-    .none { color: var(--red);    }
+/* History */
+.hist-item {
+  background: var(--bg-elevated); border-radius: 14px; padding: 12px 14px;
+  margin-bottom: 8px; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow);
+}
+.hist-icon {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;
+}
+.hist-icon.income { background: rgba(52,199,89,0.15); color: var(--green); }
+.hist-icon.expense { background: rgba(255,59,48,0.15); color: var(--red); }
+.hist-info { flex: 1; min-width: 0; }
+.hist-sku { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.hist-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.hist-amount { font-size: 16px; font-weight: 600; white-space: nowrap; }
+.hist-amount.income { color: var(--green); }
+.hist-amount.expense { color: var(--red); }
 
-    /* ── HISTORY ── */
-    .hist-item {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 13px 14px; margin-bottom: 9px;
-      display: flex; gap: 12px; align-items: flex-start;
-    }
-    .hdot { width: 9px; height: 9px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
-    .hdot.income  { background: var(--green); }
-    .hdot.expense { background: var(--red);   }
-    .hinfo { flex: 1; }
-    .hsku  { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
-    .hmeta { font-size: 11px; color: var(--muted); margin-top: 3px; }
-    .hamt  { font-family: var(--fh); font-size: 16px; font-weight: 700; white-space: nowrap; }
-    .hamt.income  { color: var(--green); }
-    .hamt.expense { color: var(--red);   }
+/* Account menu */
+.menu-item {
+  padding: 13px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 0.5px solid var(--separator); cursor: pointer; min-height: 44px;
+  transition: background 0.15s;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { background: var(--gray5); }
+.menu-label { font-size: 16px; }
+.menu-value { font-size: 16px; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; }
+.menu-arrow { color: var(--gray4); font-size: 17px; margin-left: 4px; }
 
-    /* filter chips */
-    .chips { display: flex; gap: 8px; margin-bottom: 14px; }
-    .chip {
-      padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border);
-      background: var(--surface); color: var(--muted); font-size: 13px;
-      cursor: pointer; transition: all .15s; white-space: nowrap;
-    }
-    .chip.active-income  { background: rgba(0,224,150,0.12); border-color: var(--green); color: var(--green); }
-    .chip.active-expense { background: rgba(255,75,75,0.12);  border-color: var(--red);   color: var(--red);   }
-    .chip.active-all     { background: rgba(0,198,255,0.12);  border-color: var(--accent); color: var(--accent); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #007AFF, #5856D6);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.1s;
+}
+.avatar:active { transform: scale(0.93); }
 
-    /* ── TOAST ── */
-    .toast {
-      position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%) translateY(16px);
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 11px 18px; font-size: 13px; color: var(--text);
-      opacity: 0; transition: all .28s; pointer-events: none;
-      z-index: 300; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.45);
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .toast.ok   { border-color: var(--green); }
-    .toast.err  { border-color: var(--red);   }
+/* Toast */
+.toast {
+  position: fixed; bottom: 90px; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: rgba(0,0,0,0.85); color: #fff; border-radius: 14px;
+  padding: 12px 20px; font-size: 14px; font-weight: 500;
+  opacity: 0; transition: all 0.25s; pointer-events: none;
+  z-index: 300; white-space: nowrap; max-width: 90vw;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ── LOADER ── */
-    .overlay {
-      position: fixed; inset: 0; background: rgba(2,21,43,.75);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 400; gap: 14px; backdrop-filter: blur(4px);
-    }
-    .overlay.hidden { display: none; }
-    .ring { width: 46px; height: 46px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .75s linear infinite; }
-    .overlay-msg { color: var(--muted); font-size: 14px; }
+/* Overlay */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 400; backdrop-filter: blur(8px);
+}
+.overlay.hidden { display: none; }
+.overlay-box {
+  background: var(--bg-elevated); border-radius: 14px;
+  padding: 24px 28px; display: flex; flex-direction: column;
+  align-items: center; gap: 12px; min-width: 130px;
+}
+.ring {
+  width: 32px; height: 32px; border: 2.5px solid var(--gray4);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
 
-    .empty { text-align: center; color: var(--muted); padding: 48px 20px; font-size: 14px; line-height: 1.7; }
-
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
-  </style>
+.empty { text-align: center; color: var(--text-tertiary); padding: 60px 20px; font-size: 15px; line-height: 1.5; }
+::-webkit-scrollbar { display: none; }
+</style>
 </head>
 <body>
 
-<!-- LOADER -->
 <div class="overlay hidden" id="overlay">
-  <div class="ring"></div>
-  <div class="overlay-msg" id="overlayMsg">Загрузка...</div>
+  <div class="overlay-box">
+    <div class="ring"></div>
+    <div id="overlayMsg" style="font-size:13px; color:var(--text-tertiary)"></div>
+  </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- ── SETUP ── -->
-<div id="setup-screen">
-  <div class="setup-icon">КЕГУ<br><span style="color:var(--blue)">КЕТУ</span></div>
-  <div class="setup-title">УЧЁТ СТИКЕРОВ</div>
-  <div class="setup-desc">Вставьте ссылку на ваш Google Apps Script, чтобы подключить приложение к таблице.</div>
-
-  <div class="url-input-wrap">
-    <label class="url-label">URL Google Apps Script</label>
-    <textarea class="url-input" id="scriptUrl" rows="3"
-      placeholder="https://script.google.com/macros/s/XXXXXXX/exec" style="resize:none;line-height:1.5"></textarea>
-    <div class="url-hint">
-      Смотрите инструкцию — как получить эту ссылку в 3 шага.
-    </div>
+<!-- SETUP -->
+<div class="setup" id="setup">
+  <div class="setup-logo">КК</div>
+  <div class="setup-title" data-i18n="welcome">Добро пожаловать</div>
+  <div class="setup-sub" data-i18n="welcomeDesc">Введите ваше имя для начала работы</div>
+  <div class="setup-input-wrap">
+    <input class="setup-input" id="opName" data-i18n-placeholder="yourName" placeholder="Ваше имя" autocomplete="name">
   </div>
-
-  <button class="btn-primary" id="connectBtn" onclick="connect()">Подключить</button>
-
-  <div style="font-size:12px;color:var(--muted);text-align:center;line-height:1.6;max-width:300px">
-    Все данные хранятся в вашей Google-таблице.<br>
-    Приложение не передаёт данные третьим лицам.
+  <button class="btn-primary" onclick="saveOperator()" data-i18n="continue">Продолжить</button>
+  <div style="display:flex; gap:14px; margin-top:8px">
+    <button class="icon-btn" onclick="toggleTheme()" aria-label="Theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="icon-btn" onclick="cycleLang()" aria-label="Language">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>
+    </button>
   </div>
 </div>
 
-<!-- ── APP ── -->
+<!-- APP -->
 <div id="app" class="hidden">
-
-  <div class="topbar">
-    <div class="topbar-logo">КЕГУ <span>/ КЕТУ</span></div>
-    <div class="topbar-right">
-      <span class="sync-time" id="syncTime"></span>
-      <button class="icon-btn" id="syncBtn" onclick="loadStock(true)" title="Обновить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
-          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-      </button>
-      <button class="icon-btn" onclick="showSetup()" title="Настройки">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
+  <div class="header">
+    <div class="header-left">
+      <div class="avatar" id="userAvatar" onclick="switchTab('account')">A</div>
+      <div class="header-logo">КЕГУ<span class="sep">/</span>КЕТУ</div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="syncBtn" onclick="loadStock(true)" aria-label="Sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       </button>
     </div>
   </div>
-
   <div class="content" id="content"></div>
-
   <div class="tabbar">
     <button class="tab active" id="tab-stock" onclick="switchTab('stock')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Остатки
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span data-i18n="tabStock">Остатки</span>
     </button>
     <button class="tab" id="tab-income" onclick="switchTab('income')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-      Приход
+      <span data-i18n="tabIncome">Приход</span>
     </button>
     <button class="tab" id="tab-expense" onclick="switchTab('expense')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-      Расход
+      <span data-i18n="tabExpense">Расход</span>
     </button>
     <button class="tab" id="tab-history" onclick="switchTab('history')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      История
+      <span data-i18n="tabHistory">История</span>
+    </button>
+    <button class="tab" id="tab-account" onclick="switchTab('account')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span data-i18n="tabAccount">Профиль</span>
     </button>
   </div>
 </div>
 
 <script>
-// ── CONFIG ───────────────────────────────────
-const S = {
-  url: 'https://script.google.com/macros/s/AKfycbzlsFvtNUHS5Nx8gjQiV9QNpeud7Q2eQsBH5gfQG0sCpNs-hgm6j-GZziaV2e3t1Nqi/exec',
-  tab: 'stock',
-  keType: 'КЕГУ',
-  stock: [],
-  histFilter: 'all',
+const FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLScGQV1gcf_eN1J7uoGq4ORvL5D9F-PcXdCvJdW2ELetzUy_Bw/formResponse';
+const FORM_FIELDS = {
+  date_year:'entry.795762930_year', date_month:'entry.795762930_month', date_day:'entry.795762930_day',
+  sku:'entry.1063463919', qty:'entry.251794066',
+  keType:'entry.488368777', opType:'entry.1913492143', comment:'entry.819298286'
+};
+const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
+const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Отчет остатока кегу-кету');
+
+const I18N = {
+  ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—' },
+  uz: { welcome:'Xush kelibsiz', welcomeDesc:'Boshlash uchun ismingizni kiriting', yourName:'Ismingiz', continue:'Davom etish', tabStock:'Qoldiq', tabIncome:'Kirim', tabExpense:'Chiqim', tabHistory:'Tarix', tabAccount:'Profil', totalKegu:'Jami KEGU', skuAvail:'Mavjud', noKegu:"KEGU yo'q", totalSku:'Jami SKU', bySku:"Mahsulotlar bo'yicha", needSync:"Ma'lumotlarni yuklash uchun ⟳ tugmasini bosing", incomeTitle:'Stiker kirimi', expenseTitle:'Stiker chiqimi', date:'Sana', product:'Mahsulot', selectProduct:'— Mahsulotni tanlang —', quantity:'Miqdor', quantityHint:'masalan 50000', type:'Turi', comment:'Izoh', commentOpt:'ixtiyoriy', saveIncome:'＋ Kirimni saqlash', saveExpense:'－ Chiqimni saqlash', historyTitle:'Tarix', noHistory:"Hozircha yozuvlar yo'q.<br>Birinchi operatsiyadan keyin paydo bo'ladi", historyLocal:'Ushbu qurilmadagi yozuvlar', operator:'Operator', settings:'Sozlamalar', theme:'Mavzu', themeLight:"Yorug'", themeDark:"Qorong'i", themeAuto:'Avtomatik', language:'Til', russian:'Русский', uzbek:"O'zbek", changeName:"Ismni o'zgartirish", aboutApp:'Ilova haqida', version:'Versiya', errSelectProduct:'Mahsulotni tanlang', errQty:'Miqdorni kiriting', okSaved:'✓ Saqlandi', sending:'Yuborilmoqda...', loading:'Yuklanmoqda...', syncDone:'Yangilandi', syncErr:'Xato', notSet:'Belgilanmagan', none:"Yo'q", nothing:'—' }
 };
 
-const SKU_LIST = [
-  "PEPSI - 2.25L PET 6х","PEPSI - 1,75L PET 6x","PEPSI 2L PET 6x","PEPSI 1.5L PET 6x",
-  "PEPSI 1L PET 12x","PEPSI 0,5L PET 24x","PEPSI 0.26L PET 24x","PEPSI 0.25L NRGB 12x",
-  "PEPSI 0.25L CAN 24x","PEPSI 0.449L CAN 24x","PEPSI ZERO 0.25L CAN 24x","PEPSI ZERO 0.25L NRGB 12x",
-  "PEPSI ZERO 0.5L PET 12x","PEPSI ZERO 1,5L PET 6x","MIRINDA 0.25L CAN 24x","MIRINDA 0.25L NRGB 12x",
-  "MIRINDA ORANGE 0.5L PET 12x","MIRINDA ORANGE 1.5L PET 6x","MIRINDA ORANGE 1L PET 6x",
-  "7UP 0.25L CAN 24x","7UP 0.25L NRGB 12x","7UP 0.5L PET 12x","7UP 1.5L PET 6x","7UP 1L PET 6x",
-  "LIPTON зел Клубника 0.5L PET 12x","LIPTON зел Клубника 1L PET 6x","LIPTON зел Лимон 0.5L PET 12x",
-  "LIPTON зел Лимон 1.5L PET 6x","LIPTON зел Лимон 1L PET 6x","LIPTON чер Малина 0.5L PET 12x",
-  "LIPTON зел Персик 1L PET 6x","LIPTON чер Малина 1.5L PET 6x","LIPTON чер Малина 1L PET 6x",
-  "LIPTON чер Персик 0.5L PET 12x","LIPTON зел Персик 0.5L PET 12x","LIPTON чер Персик 1L PET 6x",
-  "LIPTON черный HF Манго 0.5L PET 12x","LIPTON черный HF Манго 1L PET 6x","MOUNTAIN DEW 0.25L CAN 24x",
-  "MOUNTAIN DEW 0.5L PET 12x","MOUNTAIN DEW 1L PET 6x","ADRENALINE RUSH 0.25L CAN 24x",
-  "ADRENALINE RUSH 0.449L CAN 24x","ADRENALINE RUSH MANGO 0.449L CAN 24x","ROCKSTAR ORIGINAL 0.25L CAN 24x",
-  "ROCKSTAR ORIGINAL 0.449L CAN 24x","ROCKSTAR Гуава 0.449L CAN 12x","ROCKSTAR Персик 0.449L CAN 24x",
-  "STING - 0.3L PET 24x","STING - 0,449L PET 24x","7UP Moxito 0.449 CAN x12",
-  "7UP Moxito 500ml PET x12","7UP Moxito 1L PET x6","Lipton Green Mango 500ml PET x12",
-  "Lipton Green Mango 1L PET x6","Lipton Green Mango 1,5L PET x6","Pepsi Twist 0,449 CAN x12",
-  "Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"
-];
+const SKU_LIST = ["PEPSI - 2.25L PET 6х","PEPSI - 1,75L PET 6x","PEPSI 2L PET 6x","PEPSI 1.5L PET 6x","PEPSI 1L PET 12x","PEPSI 0,5L PET 24x","PEPSI 0.26L PET 24x","PEPSI 0.25L NRGB 12x","PEPSI 0.25L CAN 24x","PEPSI 0.449L CAN 24x","PEPSI ZERO 0.25L CAN 24x","PEPSI ZERO 0.25L NRGB 12x","PEPSI ZERO 0.5L PET 12x","PEPSI ZERO 1,5L PET 6x","MIRINDA 0.25L CAN 24x","MIRINDA 0.25L NRGB 12x","MIRINDA ORANGE 0.5L PET 12x","MIRINDA ORANGE 1.5L PET 6x","MIRINDA ORANGE 1L PET 6x","7UP 0.25L CAN 24x","7UP 0.25L NRGB 12x","7UP 0.5L PET 12x","7UP 1.5L PET 6x","7UP 1L PET 6x","LIPTON зел Клубника 0.5L PET 12x","LIPTON зел Клубника 1L PET 6x","LIPTON зел Лимон 0.5L PET 12x","LIPTON зел Лимон 1.5L PET 6x","LIPTON зел Лимон 1L PET 6x","LIPTON чер Малина 0.5L PET 12x","LIPTON зел Персик 1L PET 6x","LIPTON чер Малина 1.5L PET 6x","LIPTON чер Малина 1L PET 6x","LIPTON чер Персик 0.5L PET 12x","LIPTON зел Персик 0.5L PET 12x","LIPTON чер Персик 1L PET 6x","LIPTON черный HF Манго 0.5L PET 12x","LIPTON черный HF Манго 1L PET 6x","MOUNTAIN DEW 0.25L CAN 24x","MOUNTAIN DEW 0.5L PET 12x","MOUNTAIN DEW 1L PET 6x","ADRENALINE RUSH 0.25L CAN 24x","ADRENALINE RUSH 0.449L CAN 24x","ADRENALINE RUSH MANGO 0.449L CAN 24x","ROCKSTAR ORIGINAL 0.25L CAN 24x","ROCKSTAR ORIGINAL 0.449L CAN 24x","ROCKSTAR Гуава 0.449L CAN 12x","ROCKSTAR Персик 0.449L CAN 24x","STING - 0.3L PET 24x","STING - 0,449L PET 24x","7UP Moxito 0.449 CAN x12","7UP Moxito 500ml PET x12","7UP Moxito 1L PET x6","Lipton Green Mango 500ml PET  x12","Lipton Green Mango 1L PET x6","Lipton Green Mango 1,5L PET x6","Pepsi Twist 0,449 CAN x12","Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"];
 
-// ── API — Google Forms для записи, GAS для чтения ───────────
-const FORM_URL =  + FORM_URL + ;
+const S = {
+  tab:'stock', keType:'КЕГУ',
+  operator: localStorage.getItem('operator') || '',
+  theme: localStorage.getItem('theme') || 'auto',
+  lang: localStorage.getItem('lang') || 'ru',
+  stock: JSON.parse(localStorage.getItem('stockCache') || '[]'),
+  history: JSON.parse(localStorage.getItem('historyLocal') || '[]')
+};
 
-// Читаем данные через GAS (JSONP)
-function jsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cb = 'cb' + Date.now();
-    const to = setTimeout(() => { delete window[cb]; reject(new Error('Timeout')); }, 20000);
-    window[cb] = d => { clearTimeout(to); delete window[cb]; resolve(d); };
-    const s = document.createElement('script');
-    s.src = S.url + '?' + new URLSearchParams(Object.assign({}, params, { callback: cb }));
-    s.onerror = () => { clearTimeout(to); delete window[cb]; reject(new Error('Script error')); };
-    (document.head || document.body).appendChild(s);
-  });
+function t(k) { return I18N[S.lang][k] || k; }
+
+function applyTheme() {
+  let actual = S.theme;
+  if (actual === 'auto') actual = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', actual);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', actual === 'dark' ? '#1C1C1E' : '#FFFFFF');
+}
+function toggleTheme() {
+  const order = ['auto','light','dark'];
+  S.theme = order[(order.indexOf(S.theme)+1) % 3];
+  localStorage.setItem('theme', S.theme);
+  applyTheme();
+  if (S.tab === 'account' && !document.getElementById('app').classList.contains('hidden')) renderAccount();
+}
+function cycleLang() {
+  S.lang = S.lang === 'ru' ? 'uz' : 'ru';
+  localStorage.setItem('lang', S.lang);
+  document.documentElement.lang = S.lang;
+  applyI18n();
+  if (!document.getElementById('app').classList.contains('hidden')) switchTab(S.tab);
+}
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => el.placeholder = t(el.dataset.i18nPlaceholder));
 }
 
-async function api(params) {
-  return jsonp(params);
-}
-
-// Записываем данные через Google Forms (no-cors, работает везде!)
-async function apiPost(body) {
-  const { type, date, sku, qty, comment, keType } = body;
-  const formData = new FormData();
-  // Дата в формате MM/DD/YYYY для Google Forms
-  const d = new Date(date);
-  formData.append('entry.795762930_year',  d.getFullYear());
-  formData.append('entry.795762930_month', d.getMonth() + 1);
-  formData.append('entry.795762930_day',   d.getDate());
-  formData.append('entry.1063463919', sku);
-  formData.append('entry.251794066',  qty);
-  formData.append('entry.488368777',  keType || 'КЕГУ');
-  formData.append('entry.1913492143', type === 'income' ? 'Приход' : 'Расход');
-  formData.append('entry.819298286',  comment || '');
-  formData.append('fvv', '1');
-  formData.append('fbzx', Date.now().toString());
-
-  await fetch(FORM_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: formData
-  });
-  // no-cors не возвращает ответ — считаем успехом если не было ошибки
-  return { ok: true };
-}
-async function connect() {
-  // URL hardcoded — just launch app directly
-  document.getElementById('setup-screen').classList.add('hidden');
+function saveOperator() {
+  const name = document.getElementById('opName').value.trim();
+  if (!name) return;
+  S.operator = name;
+  localStorage.setItem('operator', name);
+  document.getElementById('setup').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
+  updateAvatar();
   switchTab('stock');
-  await loadStock();
+  loadStock();
+}
+function updateAvatar() {
+  document.getElementById('userAvatar').textContent = S.operator ? S.operator[0].toUpperCase() : 'A';
 }
 
-function showSetup() {
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('setup-screen').classList.remove('hidden');
-  document.getElementById('scriptUrl').value = S.url;
-}
-
-// ── STOCK ────────────────────────────────────
-async function loadStock(manual) {
-  overlay(true, 'Обновляю остатки...');
-  document.getElementById('syncBtn').classList.add('spinning');
-  try {
-    const res = await api({ action: 'stock' });
-    if (res.rows) {
-      S.stock = res.rows;
-      const t = new Date();
-      document.getElementById('syncTime').textContent =
-        t.getHours().toString().padStart(2,'0') + ':' + t.getMinutes().toString().padStart(2,'0');
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  for (let line of lines) {
+    if (!line.trim()) continue;
+    const row = []; let cur=''; let inQ=false;
+    for (let i=0; i<line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (c === ',' && !inQ) { row.push(cur); cur=''; }
+      else cur += c;
     }
-    if (S.tab === 'stock') renderStock();
-    if (manual) toast('Данные обновлены', 'ok');
-  } catch(e) {
-    toast('Ошибка загрузки: ' + e.message, 'err');
-  } finally {
-    overlay(false);
-    document.getElementById('syncBtn').classList.remove('spinning');
+    row.push(cur);
+    result.push(row);
   }
+  return result;
+}
+
+async function loadStock(manual) {
+  document.getElementById('syncBtn').classList.add('spinning');
+  if (manual) overlay(true, t('loading'));
+  try {
+    const r = await fetch(STOCK_CSV + '&t=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    const rows = parseCSV(text);
+    S.stock = rows.slice(1)
+      .filter(r => r[0] && r[0].trim() && r[0].trim() !== 'Наименование')
+      .map(r => ({
+        name: r[0].trim(),
+        block: Number(r[1])||0,
+        kegu:  Number(r[2])||0,
+        pallets: Number(r[3])||0,
+        ketu:  Number(r[4])||0
+      }));
+    localStorage.setItem('stockCache', JSON.stringify(S.stock));
+    if (S.tab === 'stock') renderStock();
+    if (manual) toast(t('syncDone'));
+  } catch(e) {
+    console.error(e);
+    if (manual) toast(t('syncErr'));
+  } finally {
+    document.getElementById('syncBtn').classList.remove('spinning');
+    overlay(false);
+  }
+}
+
+async function submitToForm(entry) {
+  const fd = new FormData();
+  const d = new Date(entry.date);
+  fd.append(FORM_FIELDS.date_year,  d.getFullYear());
+  fd.append(FORM_FIELDS.date_month, d.getMonth()+1);
+  fd.append(FORM_FIELDS.date_day,   d.getDate());
+  fd.append(FORM_FIELDS.sku,     entry.sku);
+  fd.append(FORM_FIELDS.qty,     entry.qty);
+  fd.append(FORM_FIELDS.keType,  entry.keType);
+  fd.append(FORM_FIELDS.opType,  entry.type === 'income' ? 'Приход' : 'Расход');
+  fd.append(FORM_FIELDS.comment, (entry.comment || '') + (S.operator ? ' [' + S.operator + ']' : ''));
+  await fetch(FORM_URL, { method:'POST', mode:'no-cors', body: fd });
+}
+
+function switchTab(tab) {
+  S.tab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  const tb = document.getElementById('tab-' + tab);
+  if (tb) tb.classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+  if (tab === 'stock') renderStock();
+  else if (tab === 'income') renderForm('income');
+  else if (tab === 'expense') renderForm('expense');
+  else if (tab === 'history') renderHistory();
+  else if (tab === 'account') renderAccount();
 }
 
 function renderStock() {
   const d = S.stock;
-  const total  = d.reduce((s,r) => s + (Number(r.kegu)||0), 0);
-  const withKe = d.filter(r => (Number(r.kegu)||0) > 0).length;
-  const noKe   = d.filter(r => (Number(r.kegu)||0) === 0).length;
-
-  const rows = d.length ? d.map(r => {
-    const k = Number(r.kegu)||0;
-    const cls = k===0 ? 'none' : (k < 20000 ? 'low' : 'ok');
-    return `<div class="sku-row">
-      <div class="sku-name">${r.name}</div>
-      <div class="sku-val ${cls}">${k===0 ? 'Нет' : k.toLocaleString('ru')}</div>
-    </div>`;
-  }).join('')
-  : `<div class="empty">Нажмите <b>⟳</b> для загрузки данных из таблицы</div>`;
-
-  document.getElementById('content').innerHTML = `
-    <div class="sec-title">Остатки КЕГУ</div>
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-lbl">Всего КЕГУ</div><div class="stat-val c-accent">${total ? (total/1000).toFixed(0)+'K' : '—'}</div></div>
-      <div class="stat"><div class="stat-lbl">В наличии SKU</div><div class="stat-val c-green">${withKe}</div></div>
-      <div class="stat"><div class="stat-lbl">Нет КЕГУ</div><div class="stat-val c-red">${noKe}</div></div>
-      <div class="stat"><div class="stat-lbl">Всего SKU</div><div class="stat-val c-accent">${d.length || SKU_LIST.length}</div></div>
-    </div>
-    <div class="sec-title">По SKU</div>
-    <div class="sku-list">${rows}</div>`;
+  const total = d.reduce((s,r) => s + r.kegu, 0);
+  const withKe = d.filter(r => r.kegu > 0).length;
+  const noKe   = d.filter(r => r.kegu === 0).length;
+  let skuHtml = '';
+  if (d.length) {
+    skuHtml = '<div class="card-group">' + d.map(r => {
+      const cls = r.kegu === 0 ? 'none' : (r.kegu < 20000 ? 'low' : 'ok');
+      return '<div class="card-row"><div class="sku-name">' + r.name + '</div><div class="sku-val ' + cls + '">' + (r.kegu === 0 ? t('none') : r.kegu.toLocaleString('ru')) + '</div></div>';
+    }).join('') + '</div>';
+  } else {
+    skuHtml = '<div class="empty">' + t('needSync') + '</div>';
+  }
+  document.getElementById('content').innerHTML =
+    '<div class="section-title">' + t('tabStock') + '</div>' +
+    '<div class="stat-grid">' +
+      '<div class="stat"><div class="stat-label">' + t('totalKegu') + '</div><div class="stat-value c-accent">' + (total ? (total/1000).toFixed(0)+'K' : t('nothing')) + '</div></div>' +
+      '<div class="stat"><div class="stat-label">' + t('skuAvail') + '</div><div class="stat-value c-green">' + withKe + '</div></div>' +
+      '<div class="stat"><div class="stat-label">' + t('noKegu') + '</div><div class="stat-value c-red">' + noKe + '</div></div>' +
+      '<div class="stat"><div class="stat-label">' + t('totalSku') + '</div><div class="stat-value c-accent">' + (d.length || SKU_LIST.length) + '</div></div>' +
+    '</div>' +
+    '<div class="section-label">' + t('bySku') + '</div>' + skuHtml;
 }
 
-// ── FORM ─────────────────────────────────────
 function renderForm(type) {
   S.keType = 'КЕГУ';
-  const inc = type === 'income';
+  const isIncome = type === 'income';
   const today = new Date().toISOString().slice(0,10);
-  const opts = SKU_LIST.map(s=>`<option value="${s}">${s}</option>`).join('');
-
-  document.getElementById('content').innerHTML = `
-    <div class="sec-title">${inc ? 'Приход стикеров' : 'Расход стикеров'}</div>
-    <div class="card">
-      <div class="frow">
-        <label class="flabel">Дата</label>
-        <input class="finput" type="date" id="fDate" value="${today}">
-      </div>
-      <div class="frow">
-        <label class="flabel">Продукт (SKU)</label>
-        <select class="fselect" id="fSku">
-          <option value="">— выберите продукт —</option>${opts}
-        </select>
-      </div>
-      <div class="frow">
-        <label class="flabel">Количество (стикеров)</label>
-        <input class="finput" type="number" id="fQty" placeholder="напр. 50000" inputmode="numeric" min="1">
-      </div>
-      <div class="frow">
-        <label class="flabel">КЕГУ / КЕТУ</label>
-        <div class="ke-toggle">
-          <button class="ke-btn kegu" id="keKegu" onclick="setKe('КЕГУ')">КЕГУ</button>
-          <button class="ke-btn" id="keKetu" onclick="setKe('КЕТУ')">КЕТУ</button>
-        </div>
-      </div>
-      <div class="frow">
-        <label class="flabel">Комментарий</label>
-        <input class="finput" type="text" id="fComment" placeholder="необязательно">
-      </div>
-      <button class="submit-btn ${type}" id="submitBtn" onclick="submit('${type}')">
-        ${inc ? '＋ Записать приход' : '－ Записать расход'}
-      </button>
-    </div>`;
+  const opts = SKU_LIST.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+  document.getElementById('content').innerHTML =
+    '<div class="section-title">' + (isIncome ? t('incomeTitle') : t('expenseTitle')) + '</div>' +
+    '<div class="card-group">' +
+      '<div class="form-row"><label class="form-label">' + t('date') + '</label><input class="form-input" type="date" id="fDate" value="' + today + '"></div>' +
+      '<div class="form-row"><label class="form-label">' + t('product') + '</label><select class="form-select" id="fSku"><option value="">' + t('selectProduct') + '</option>' + opts + '</select></div>' +
+      '<div class="form-row"><label class="form-label">' + t('quantity') + '</label><input class="form-input" type="number" id="fQty" placeholder="' + t('quantityHint') + '" inputmode="numeric" min="1"></div>' +
+      '<div class="form-row"><label class="form-label">' + t('type') + '</label><div class="segmented" id="keToggle"><button class="seg-btn active" onclick="setKe(\'КЕГУ\')">КЕГУ</button><button class="seg-btn" onclick="setKe(\'КЕТУ\')">КЕТУ</button></div></div>' +
+      '<div class="form-row"><label class="form-label">' + t('comment') + '</label><input class="form-input" type="text" id="fComment" placeholder="' + t('commentOpt') + '"></div>' +
+    '</div>' +
+    '<button class="submit-btn ' + type + '" id="submitBtn" onclick="submitEntry(\'' + type + '\')">' + (isIncome ? t('saveIncome') : t('saveExpense')) + '</button>';
 }
 
 function setKe(ke) {
   S.keType = ke;
-  document.getElementById('keKegu').className = 'ke-btn' + (ke==='КЕГУ'?' kegu':'');
-  document.getElementById('keKetu').className = 'ke-btn' + (ke==='КЕТУ'?' ketu':'');
+  document.querySelectorAll('#keToggle .seg-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#keToggle .seg-btn')[ke === 'КЕГУ' ? 0 : 1].classList.add('active');
 }
 
-async function submit(type) {
-  const date    = document.getElementById('fDate').value;
-  const sku     = document.getElementById('fSku').value;
-  const qty     = Number(document.getElementById('fQty').value);
+async function submitEntry(type) {
+  const date = document.getElementById('fDate').value;
+  const sku = document.getElementById('fSku').value;
+  const qty = Number(document.getElementById('fQty').value);
   const comment = document.getElementById('fComment').value;
-
-  if (!sku)    { toast('Выберите продукт', 'err'); return; }
-  if (!qty||qty<=0) { toast('Укажите количество', 'err'); return; }
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  overlay(true, 'Сохраняю...');
-
+  if (!sku) { toast(t('errSelectProduct')); return; }
+  if (!qty || qty <= 0) { toast(t('errQty')); return; }
+  const entry = { type, date, sku, qty, comment, keType: S.keType, operator: S.operator, ts: Date.now() };
+  document.getElementById('submitBtn').disabled = true;
+  overlay(true, t('sending'));
+  S.history.unshift(entry);
+  S.history = S.history.slice(0, 200);
+  localStorage.setItem('historyLocal', JSON.stringify(S.history));
   try {
-    await apiPost({ action:'add', type, date, sku, qty, comment, keType: S.keType });
-    toast(type==='income' ? '✓ Приход записан' : '✓ Расход записан', 'ok');
+    await submitToForm(entry);
+    toast(t('okSaved'));
     document.getElementById('fQty').value = '';
     document.getElementById('fComment').value = '';
     document.getElementById('fSku').selectedIndex = 0;
     setKe('КЕГУ');
   } catch(e) {
-    toast('Ошибка: ' + e.message, 'err');
+    toast('✕ ' + e.message);
   } finally {
-    btn.disabled = false;
+    document.getElementById('submitBtn').disabled = false;
     overlay(false);
   }
 }
 
-// ── HISTORY ──────────────────────────────────
-async function renderHistory() {
-  overlay(true, 'Загружаю историю...');
-  try {
-    const filter = S.histFilter;
-    let rows = [];
-    if (filter === 'all' || filter === 'income') {
-      const r = await api({ action:'history', type:'income' });
-      rows = rows.concat((r.rows||[]).map(x=>({...x,type:'income'})));
-    }
-    if (filter === 'all' || filter === 'expense') {
-      const r = await api({ action:'history', type:'expense' });
-      rows = rows.concat((r.rows||[]).map(x=>({...x,type:'expense'})));
-    }
-    rows.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-    const items = rows.length
-      ? rows.map(e => {
-          const sign = e.type==='income' ? '+' : '−';
-          return `<div class="hist-item">
-            <div class="hdot ${e.type}"></div>
-            <div class="hinfo">
-              <div class="hsku">${e.sku}</div>
-              <div class="hmeta">${e.date} · ${e.keType||''}${e.comment?' · '+e.comment:''}</div>
-            </div>
-            <div class="hamt ${e.type}">${sign}${Number(e.qty).toLocaleString('ru')}</div>
-          </div>`;
-        }).join('')
-      : '<div class="empty">Записей пока нет</div>';
+function renderHistory() {
+  const list = S.history;
+  if (!list.length) {
+    document.getElementById('content').innerHTML =
+      '<div class="section-title">' + t('historyTitle') + '</div>' +
+      '<div class="empty">' + t('noHistory') + '</div>';
+    return;
+  }
+  const items = list.map(e => {
+    const sign = e.type === 'income' ? '+' : '−';
+    const icon = e.type === 'income' ? '↓' : '↑';
+    return '<div class="hist-item"><div class="hist-icon ' + e.type + '">' + icon + '</div><div class="hist-info"><div class="hist-sku">' + e.sku + '</div><div class="hist-meta">' + e.date + ' · ' + e.keType + (e.comment ? ' · ' + e.comment : '') + '</div></div><div class="hist-amount ' + e.type + '">' + sign + Number(e.qty).toLocaleString('ru') + '</div></div>';
+  }).join('');
+  document.getElementById('content').innerHTML =
+    '<div class="section-title">' + t('historyTitle') + '</div>' +
+    '<div class="section-label">' + t('historyLocal') + '</div>' + items;
+}
 
-    document.getElementById('content').innerHTML = `
-      <div class="sec-title">История</div>
-      <div class="chips">
-        <div class="chip ${filter==='all'?'active-all':''}" onclick="setFilter('all')">Все</div>
-        <div class="chip ${filter==='income'?'active-income':''}" onclick="setFilter('income')">Приход</div>
-        <div class="chip ${filter==='expense'?'active-expense':''}" onclick="setFilter('expense')">Расход</div>
-      </div>
-      ${items}`;
-  } catch(e) {
-    document.getElementById('content').innerHTML = `<div class="empty">Ошибка загрузки: ${e.message}</div>`;
-  } finally {
-    overlay(false);
+function renderAccount() {
+  const themeLabel = S.theme === 'light' ? t('themeLight') : S.theme === 'dark' ? t('themeDark') : t('themeAuto');
+  const langLabel = S.lang === 'ru' ? t('russian') : t('uzbek');
+  document.getElementById('content').innerHTML =
+    '<div class="section-title">' + t('tabAccount') + '</div>' +
+    '<div class="card-group">' +
+      '<div class="menu-item"><span class="menu-label">' + t('operator') + '</span><span class="menu-value">' + (S.operator || t('notSet')) + '</span></div>' +
+      '<div class="menu-item" onclick="changeName()"><span class="menu-label" style="color:var(--accent)">' + t('changeName') + '</span></div>' +
+    '</div>' +
+    '<div class="section-label">' + t('settings') + '</div>' +
+    '<div class="card-group">' +
+      '<div class="menu-item" onclick="toggleTheme()"><span class="menu-label">' + t('theme') + '</span><span class="menu-value">' + themeLabel + '<span class="menu-arrow">›</span></span></div>' +
+      '<div class="menu-item" onclick="cycleLang()"><span class="menu-label">' + t('language') + '</span><span class="menu-value">' + langLabel + '<span class="menu-arrow">›</span></span></div>' +
+    '</div>' +
+    '<div class="section-label">' + t('aboutApp') + '</div>' +
+    '<div class="card-group">' +
+      '<div class="menu-item"><span class="menu-label">' + t('version') + '</span><span class="menu-value">2.0</span></div>' +
+    '</div>';
+}
+
+function changeName() {
+  const newName = prompt(t('yourName'), S.operator);
+  if (newName && newName.trim()) {
+    S.operator = newName.trim();
+    localStorage.setItem('operator', S.operator);
+    updateAvatar();
+    renderAccount();
   }
 }
 
-function setFilter(f) {
-  S.histFilter = f;
-  renderHistory();
+let toastTimer;
+function toast(msg) {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
-
-// ── TABS ─────────────────────────────────────
-function switchTab(tab) {
-  S.tab = tab;
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.getElementById('content').scrollTop = 0;
-  if (tab === 'stock')   renderStock();
-  else if (tab === 'income')  renderForm('income');
-  else if (tab === 'expense') renderForm('expense');
-  else if (tab === 'history') renderHistory();
-}
-
-// ── UTILS ────────────────────────────────────
 function overlay(show, msg) {
   document.getElementById('overlay').classList.toggle('hidden', !show);
   if (msg) document.getElementById('overlayMsg').textContent = msg;
 }
-let toastTimer;
-function toast(msg, type='') {
-  clearTimeout(toastTimer);
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show ' + type;
-  toastTimer = setTimeout(() => t.className = 'toast', 3200);
+
+// INIT
+applyTheme();
+document.documentElement.lang = S.lang;
+applyI18n();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.theme === 'auto') applyTheme(); });
+
+if (S.operator) {
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  updateAvatar();
+  switchTab('stock');
+  loadStock();
+} else {
+  setTimeout(() => document.getElementById('opName').focus(), 200);
 }
 
-// ── INIT ─────────────────────────────────────
-// URL уже вшит — сразу открываем приложение
-document.getElementById('setup-screen').classList.add('hidden');
-document.getElementById('app').classList.remove('hidden');
-switchTab('stock');
-loadStock();
-
-// Register service worker for PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
