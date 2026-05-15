@@ -335,7 +335,7 @@ const FORM_FIELDS = {
   keType:'entry.488368777', opType:'entry.1913492143', comment:'entry.819298286'
 };
 const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
-const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Остатки');
+const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Отчет остатока кегу-кету');
 
 const I18N = {
   ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—' },
@@ -423,14 +423,22 @@ async function loadStock(manual) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const text = await r.text();
     const rows = parseCSV(text);
+    // Извлекаем глобальное КЕТУ из ячейки G2 (если есть)
+    let globalKetu = 0;
+    if (rows[1] && rows[1][6]) {
+      globalKetu = Number(String(rows[1][6]).replace(/[\s,]/g, ''))||0;
+    }
+    S.ketuGlobal = globalKetu;
+    localStorage.setItem('ketuGlobal', String(globalKetu));
+
     S.stock = rows.slice(1)
       .filter(r => r[0] && r[0].trim() && r[0].trim() !== 'Наименование')
       .map(r => ({
         name: r[0].trim(),
-        block: Number(r[1])||0,
-        kegu:  Number(r[2])||0,
-        pallets: Number(r[3])||0,
-        ketu:  Number(r[4])||0
+        block: Number(String(r[1]||'').replace(/[\s,]/g,''))||0,
+        kegu:  Number(String(r[2]||'').replace(/[\s,#N\/A]/g,''))||0,
+        pallets: Number(String(r[3]||'').replace(/[\s,]/g,''))||0,
+        ketu:  Number(String(r[4]||'').replace(/[\s,]/g,''))||0
       }));
     localStorage.setItem('stockCache', JSON.stringify(S.stock));
     if (S.tab === 'stock') renderStock();
@@ -473,6 +481,7 @@ function switchTab(tab) {
 
 function renderStock() {
   const d = S.stock;
+  const ketuGlobal = S.ketuGlobal || Number(localStorage.getItem('ketuGlobal'))||0;
   const total = d.reduce((s,r) => s + r.kegu, 0);
   const withKe = d.filter(r => r.kegu > 0).length;
   const noKe   = d.filter(r => r.kegu === 0).length;
@@ -485,13 +494,14 @@ function renderStock() {
   } else {
     skuHtml = '<div class="empty">' + t('needSync') + '</div>';
   }
+  const ketuCls = ketuGlobal === 0 ? 'c-red' : (ketuGlobal < 20000 ? 'c-orange' : 'c-green');
   document.getElementById('content').innerHTML =
     '<div class="section-title">' + t('tabStock') + '</div>' +
     '<div class="stat-grid">' +
       '<div class="stat"><div class="stat-label">' + t('totalKegu') + '</div><div class="stat-value c-accent">' + (total ? (total/1000).toFixed(0)+'K' : t('nothing')) + '</div></div>' +
+      '<div class="stat"><div class="stat-label">КЕТУ</div><div class="stat-value ' + ketuCls + '">' + (ketuGlobal ? ketuGlobal.toLocaleString('ru') : t('nothing')) + '</div></div>' +
       '<div class="stat"><div class="stat-label">' + t('skuAvail') + '</div><div class="stat-value c-green">' + withKe + '</div></div>' +
       '<div class="stat"><div class="stat-label">' + t('noKegu') + '</div><div class="stat-value c-red">' + noKe + '</div></div>' +
-      '<div class="stat"><div class="stat-label">' + t('totalSku') + '</div><div class="stat-value c-accent">' + (d.length || SKU_LIST.length) + '</div></div>' +
     '</div>' +
     '<div class="section-label">' + t('bySku') + '</div>' + skuHtml;
 }
