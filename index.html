@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="КЕГУ·КЕТУ" />
   <link rel="manifest" href="manifest.json" />
   <title>КЕГУ / КЕТУ</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com https://script.googleusercontent.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src *; img-src *;">
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
@@ -307,7 +307,7 @@
 <script>
 // ── CONFIG ───────────────────────────────────
 const S = {
-  url: localStorage.getItem('gasUrl') || 'https://script.google.com/macros/s/AKfycbzlsFvtNUHS5Nx8gjQiV9QNpeud7Q2eQsBH5gfQG0sCpNs-hgm6j-GZziaV2e3t1Nqi/exec',
+  url: 'https://script.google.com/macros/s/AKfycbzlsFvtNUHS5Nx8gjQiV9QNpeud7Q2eQsBH5gfQG0sCpNs-hgm6j-GZziaV2e3t1Nqi/exec',
   tab: 'stock',
   keType: 'КЕГУ',
   stock: [],
@@ -335,61 +335,42 @@ const SKU_LIST = [
   "Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"
 ];
 
-// ── API via JSONP (bypasses CORS completely) ─────────────────
-function jsonp(params) {
+// ── API via no-cors fetch + form submit trick ────────────────
+async function api(params) {
+  // Use no-cors fetch for read — falls back to iframe form for writes
+  try {
+    const url = S.url + '?' + new URLSearchParams(Object.assign({}, params, {t: Date.now()}));
+    const r = await fetch(url, {
+      method: 'GET',
+      mode: 'no-cors',
+      cache: 'no-cache',
+    });
+    // no-cors gives opaque response — use JSONP instead
+  } catch(e) {}
+  // Always use JSONP
   return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      reject(new Error('Timeout'));
-    }, 15000);
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      resolve(data);
-    };
-    const p = Object.assign({}, params, { callback: cbName });
-    const url = S.url + '?' + new URLSearchParams(p);
-    const script = document.createElement('script');
-    script.src = url;
-    script.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('Script load error')); };
-    document.head.appendChild(script);
+    const cb = 'cb' + Date.now();
+    const to = setTimeout(() => { delete window[cb]; reject(new Error('Timeout')); }, 20000);
+    window[cb] = d => { clearTimeout(to); delete window[cb]; resolve(d); };
+    const s = document.createElement('script');
+    s.src = S.url + '?' + new URLSearchParams(Object.assign({}, params, { callback: cb, t: Date.now() }));
+    s.onerror = () => { clearTimeout(to); delete window[cb]; reject(new Error('Script load error')); };
+    (document.head || document.body).appendChild(s);
+    setTimeout(() => { try { s.remove(); } catch(e){} }, 25000);
   });
 }
 
-async function api(params) {
-  return jsonp(params);
-}
-
 async function apiPost(body) {
-  return jsonp(body);
+  return api(body);
 }
 
 // ── SETUP ────────────────────────────────────
 async function connect() {
-  const url = document.getElementById('scriptUrl').value.trim();
-  if (!url.includes('script.google.com')) {
-    toast('Вставьте правильную ссылку на Apps Script', 'err'); return;
-  }
-  S.url = url;
-  const btn = document.getElementById('connectBtn');
-  btn.disabled = true; btn.textContent = 'Проверяю...';
-  try {
-    const res = await jsonp({ action: 'ping' });
-    if (res.ok) {
-      localStorage.setItem('gasUrl', url);
-      document.getElementById('setup-screen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
-      switchTab('stock');
-      await loadStock();
-    } else throw new Error('bad response');
-  } catch (e) {
-    toast('Не удалось подключиться. Проверьте URL.', 'err');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Подключить';
-  }
+  // URL hardcoded — just launch app directly
+  document.getElementById('setup-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  switchTab('stock');
+  await loadStock();
 }
 
 function showSetup() {
