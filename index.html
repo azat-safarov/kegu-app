@@ -458,11 +458,15 @@ async function submitToForm(entry) {
   fd.append(FORM_FIELDS.date_year,  d.getFullYear());
   fd.append(FORM_FIELDS.date_month, d.getMonth()+1);
   fd.append(FORM_FIELDS.date_day,   d.getDate());
-  fd.append(FORM_FIELDS.sku,     entry.sku);
+  // При КЕТУ продукт не нужен — но форма требует валидное значение из списка
+  // Поэтому подставляем первый SKU как заглушку, но в комментарии помечаем что это КЕТУ
+  const skuToSend = entry.keType === 'КЕТУ' ? SKU_LIST[0] : entry.sku;
+  fd.append(FORM_FIELDS.sku,     skuToSend);
   fd.append(FORM_FIELDS.qty,     entry.type === 'expense' ? -Math.abs(entry.qty) : entry.qty);
   fd.append(FORM_FIELDS.keType,  entry.keType);
   fd.append(FORM_FIELDS.opType,  entry.type === 'income' ? 'Приход' : 'Расход');
-  fd.append(FORM_FIELDS.comment, (entry.comment || '') + (S.operator ? ' [' + S.operator + ']' : ''));
+  const ketuMark = entry.keType === 'КЕТУ' ? '[КЕТУ-общий] ' : '';
+  fd.append(FORM_FIELDS.comment, ketuMark + (entry.comment || '') + (S.operator ? ' [' + S.operator + ']' : ''));
   await fetch(FORM_URL, { method:'POST', mode:'no-cors', body: fd });
 }
 
@@ -515,7 +519,7 @@ function renderForm(type) {
     '<div class="section-title">' + (isIncome ? t('incomeTitle') : t('expenseTitle')) + '</div>' +
     '<div class="card-group">' +
       '<div class="form-row"><label class="form-label">' + t('date') + '</label><input class="form-input" type="date" id="fDate" value="' + today + '"></div>' +
-      '<div class="form-row"><label class="form-label">' + t('product') + '</label><select class="form-select" id="fSku"><option value="">' + t('selectProduct') + '</option>' + opts + '</select></div>' +
+      '<div class="form-row" id="skuRow"><label class="form-label">' + t('product') + '</label><select class="form-select" id="fSku"><option value="">' + t('selectProduct') + '</option>' + opts + '</select></div>' +
       '<div class="form-row"><label class="form-label">' + t('quantity') + '</label><input class="form-input" type="number" id="fQty" placeholder="' + t('quantityHint') + '" inputmode="numeric" min="1"></div>' +
       '<div class="form-row"><label class="form-label">' + t('type') + '</label><div class="segmented" id="keToggle"><button class="seg-btn active" onclick="setKe(\'КЕГУ\')">КЕГУ</button><button class="seg-btn" onclick="setKe(\'КЕТУ\')">КЕТУ</button></div></div>' +
       '<div class="form-row"><label class="form-label">' + t('comment') + '</label><input class="form-input" type="text" id="fComment" placeholder="' + t('commentOpt') + '"></div>' +
@@ -527,6 +531,17 @@ function setKe(ke) {
   S.keType = ke;
   document.querySelectorAll('#keToggle .seg-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#keToggle .seg-btn')[ke === 'КЕГУ' ? 0 : 1].classList.add('active');
+  // Скрываем/показываем поле продукта в зависимости от КЕГУ/КЕТУ
+  const skuRow = document.getElementById('skuRow');
+  if (skuRow) {
+    if (ke === 'КЕТУ') {
+      skuRow.style.display = 'none';
+      const fSku = document.getElementById('fSku');
+      if (fSku) fSku.selectedIndex = 0;
+    } else {
+      skuRow.style.display = '';
+    }
+  }
 }
 
 async function submitEntry(type) {
@@ -534,7 +549,8 @@ async function submitEntry(type) {
   const sku = document.getElementById('fSku').value;
   const qty = Number(document.getElementById('fQty').value);
   const comment = document.getElementById('fComment').value;
-  if (!sku) { toast(t('errSelectProduct')); return; }
+  // При КЕТУ продукт не обязателен
+  if (S.keType === 'КЕГУ' && !sku) { toast(t('errSelectProduct')); return; }
   if (!qty || qty <= 0) { toast(t('errQty')); return; }
   const entry = { type, date, sku, qty, comment, keType: S.keType, operator: S.operator, ts: Date.now() };
   document.getElementById('submitBtn').disabled = true;
