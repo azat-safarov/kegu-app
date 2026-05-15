@@ -334,22 +334,36 @@ const SKU_LIST = [
   "Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"
 ];
 
-// ── API ──────────────────────────────────────
+// ── API via JSONP (bypasses CORS completely) ─────────────────
+function jsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('Timeout'));
+    }, 15000);
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      resolve(data);
+    };
+    const p = Object.assign({}, params, { callback: cbName });
+    const url = S.url + '?' + new URLSearchParams(p);
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('Script load error')); };
+    document.head.appendChild(script);
+  });
+}
+
 async function api(params) {
-  const url = S.url + '?' + new URLSearchParams(params);
-  const r = await fetch(url, { redirect: 'follow' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+  return jsonp(params);
 }
 
 async function apiPost(body) {
-  // GET request to avoid CORS preflight block on Apps Script
-  const params = new URLSearchParams();
-  for (const [k, v] of Object.entries(body)) params.set(k, String(v));
-  const url = S.url + '?' + params.toString();
-  const r = await fetch(url, { redirect: 'follow' });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+  return jsonp(body);
 }
 
 // ── SETUP ────────────────────────────────────
