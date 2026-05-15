@@ -335,36 +335,51 @@ const SKU_LIST = [
   "Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"
 ];
 
-// ── API via no-cors fetch + form submit trick ────────────────
-async function api(params) {
-  // Use no-cors fetch for read — falls back to iframe form for writes
-  try {
-    const url = S.url + '?' + new URLSearchParams(Object.assign({}, params, {t: Date.now()}));
-    const r = await fetch(url, {
-      method: 'GET',
-      mode: 'no-cors',
-      cache: 'no-cache',
-    });
-    // no-cors gives opaque response — use JSONP instead
-  } catch(e) {}
-  // Always use JSONP
+// ── API — Google Forms для записи, GAS для чтения ───────────
+const FORM_URL =  + FORM_URL + ;
+
+// Читаем данные через GAS (JSONP)
+function jsonp(params) {
   return new Promise((resolve, reject) => {
     const cb = 'cb' + Date.now();
     const to = setTimeout(() => { delete window[cb]; reject(new Error('Timeout')); }, 20000);
     window[cb] = d => { clearTimeout(to); delete window[cb]; resolve(d); };
     const s = document.createElement('script');
-    s.src = S.url + '?' + new URLSearchParams(Object.assign({}, params, { callback: cb, t: Date.now() }));
-    s.onerror = () => { clearTimeout(to); delete window[cb]; reject(new Error('Script load error')); };
+    s.src = S.url + '?' + new URLSearchParams(Object.assign({}, params, { callback: cb }));
+    s.onerror = () => { clearTimeout(to); delete window[cb]; reject(new Error('Script error')); };
     (document.head || document.body).appendChild(s);
-    setTimeout(() => { try { s.remove(); } catch(e){} }, 25000);
   });
 }
 
-async function apiPost(body) {
-  return api(body);
+async function api(params) {
+  return jsonp(params);
 }
 
-// ── SETUP ────────────────────────────────────
+// Записываем данные через Google Forms (no-cors, работает везде!)
+async function apiPost(body) {
+  const { type, date, sku, qty, comment, keType } = body;
+  const formData = new FormData();
+  // Дата в формате MM/DD/YYYY для Google Forms
+  const d = new Date(date);
+  formData.append('entry.795762930_year',  d.getFullYear());
+  formData.append('entry.795762930_month', d.getMonth() + 1);
+  formData.append('entry.795762930_day',   d.getDate());
+  formData.append('entry.1063463919', sku);
+  formData.append('entry.251794066',  qty);
+  formData.append('entry.488368777',  keType || 'КЕГУ');
+  formData.append('entry.1913492143', type === 'income' ? 'Приход' : 'Расход');
+  formData.append('entry.819298286',  comment || '');
+  formData.append('fvv', '1');
+  formData.append('fbzx', Date.now().toString());
+
+  await fetch(FORM_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: formData
+  });
+  // no-cors не возвращает ответ — считаем успехом если не было ошибки
+  return { ok: true };
+}
 async function connect() {
   // URL hardcoded — just launch app directly
   document.getElementById('setup-screen').classList.add('hidden');
