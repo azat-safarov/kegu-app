@@ -462,7 +462,7 @@ async function submitToForm(entry) {
   // Поэтому подставляем первый SKU как заглушку, но в комментарии помечаем что это КЕТУ
   const skuToSend = entry.keType === 'КЕТУ' ? SKU_LIST[0] : entry.sku;
   fd.append(FORM_FIELDS.sku,     skuToSend);
-  fd.append(FORM_FIELDS.qty,     entry.type === 'expense' ? -Math.abs(entry.qty) : entry.qty);
+  fd.append(FORM_FIELDS.qty,     Math.abs(entry.qty));
   fd.append(FORM_FIELDS.keType,  entry.keType);
   fd.append(FORM_FIELDS.opType,  entry.type === 'income' ? 'Приход' : 'Расход');
   const ketuMark = entry.keType === 'КЕТУ' ? '[КЕТУ-общий] ' : '';
