@@ -333,6 +333,97 @@ body {
   border-radius: 50%; border: 1.5px solid var(--tab-bg);
 }
 .tab { position: relative; }
+
+/* Inventory screen */
+.inv-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  z-index: 450; display: flex; flex-direction: column;
+}
+.inv-screen.hidden { display: none; }
+.inv-header {
+  background: var(--bg-elevated); border-bottom: 0.5px solid var(--separator);
+  padding: 14px 16px; padding-top: max(14px, env(safe-area-inset-top));
+  display: flex; align-items: center; justify-content: space-between;
+}
+.inv-header .inv-title { font-size: 17px; font-weight: 700; }
+.inv-close {
+  background: var(--gray6); border: none; color: var(--text-tertiary);
+  border-radius: 50%; width: 32px; height: 32px; font-size: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.inv-progress-bar {
+  height: 4px; background: var(--gray5); position: relative; overflow: hidden;
+}
+.inv-progress-fill {
+  height: 100%; background: var(--accent); transition: width 0.3s ease;
+}
+.inv-body {
+  flex: 1; overflow-y: auto; padding: 24px 20px;
+  display: flex; flex-direction: column;
+}
+.inv-step-label {
+  font-size: 13px; font-weight: 600; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; text-align: center;
+  margin-bottom: 6px;
+}
+.inv-badge {
+  align-self: center; padding: 5px 14px; border-radius: 14px;
+  font-size: 13px; font-weight: 600; margin-bottom: 24px;
+}
+.inv-badge.kegu { background: rgba(0,122,255,0.12); color: var(--accent); }
+.inv-badge.ketu { background: rgba(255,149,0,0.14); color: var(--orange); }
+.inv-product-name {
+  font-size: 26px; font-weight: 700; text-align: center;
+  letter-spacing: -0.5px; line-height: 1.25; margin-bottom: 8px;
+  padding: 0 10px;
+}
+.inv-qty-label {
+  font-size: 13px; color: var(--text-tertiary); text-align: center;
+  margin-bottom: 28px;
+}
+.inv-qty-input {
+  width: 100%; max-width: 280px; align-self: center;
+  background: var(--bg-elevated); border: 2px solid var(--separator);
+  border-radius: 16px; color: var(--text); font-family: inherit;
+  font-size: 32px; font-weight: 700; text-align: center;
+  padding: 18px 16px; outline: none; transition: border-color 0.2s;
+  margin-bottom: 28px;
+}
+.inv-qty-input:focus { border-color: var(--accent); }
+.inv-next-btn {
+  width: 100%; max-width: 320px; align-self: center;
+  background: var(--accent); color: #fff; border: none; border-radius: 16px;
+  padding: 17px; font-family: inherit; font-size: 18px; font-weight: 700;
+  cursor: pointer; transition: all 0.1s;
+}
+.inv-next-btn:active { transform: scale(0.97); opacity: 0.9; }
+.inv-next-btn.finish { background: var(--green); }
+.inv-counter {
+  text-align: center; font-size: 14px; color: var(--text-tertiary);
+  margin-top: auto; padding-top: 24px;
+}
+.inv-intro {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 16px; padding: 20px;
+}
+.inv-intro-icon {
+  width: 80px; height: 80px; border-radius: 20px;
+  background: linear-gradient(135deg, #007AFF, #5856D6);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
+}
+.inv-intro-icon svg { width: 40px; height: 40px; color: #fff; }
+.inv-intro h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.4px; }
+.inv-intro p {
+  font-size: 15px; color: var(--text-tertiary); line-height: 1.5;
+  max-width: 320px;
+}
+.inv-done-icon {
+  width: 90px; height: 90px; border-radius: 50%;
+  background: rgba(52,199,89,0.15); display: flex;
+  align-items: center; justify-content: center; margin-bottom: 8px;
+}
+.inv-done-icon svg { width: 48px; height: 48px; color: var(--green); }
 ::-webkit-scrollbar { display: none; }
 </style>
 </head>
@@ -357,6 +448,16 @@ body {
       <button class="modal-btn confirm" id="cmConfirm">Подтвердить</button>
     </div>
   </div>
+</div>
+
+<!-- INVENTORY SCREEN -->
+<div class="inv-screen hidden" id="invScreen">
+  <div class="inv-header">
+    <span class="inv-title" id="invHeaderTitle">Инвентаризация</span>
+    <button class="inv-close" onclick="exitInventory()">✕</button>
+  </div>
+  <div class="inv-progress-bar"><div class="inv-progress-fill" id="invProgressFill" style="width:0%"></div></div>
+  <div class="inv-body" id="invBody"></div>
 </div>
 
 <!-- SETUP -->
@@ -423,12 +524,19 @@ const FORM_FIELDS = {
   sku:'entry.1063463919', qty:'entry.251794066',
   keType:'entry.488368777', opType:'entry.1913492143', comment:'entry.819298286'
 };
+// Форма инвентаризации (отдельная — пишет в лист "Ответы на форму (2)")
+const INV_FORM_URL = 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSdCLV6T8Aza2FOkfwtlTXp4HiNqzkSna_6keWs7VJWE9VbBdw/formResponse';
+const INV_FIELDS = {
+  date_year:'entry.1459461189_year', date_month:'entry.1459461189_month', date_day:'entry.1459461189_day',
+  product:'entry.1281335664', qty:'entry.557542514', operator:'entry.67922537'
+};
 const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
 const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Отчет остатока кегу-кету');
 
+
 const I18N = {
-  ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', scan:'Штрих-код', scanHint:'Отсканируйте или введите код', scanNotFound:'Код не распознан', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—', confirmTitle:'Подтвердите запись', confirmOp:'Операция', confirmProduct:'Продукт', confirmQty:'Количество', confirmType:'Тип', confirmYes:'Подтвердить', confirmNo:'Отмена', opIncome:'Приход', opExpense:'Расход', searchPlaceholder:'Поиск продукта...', filterAll:'Все', filterLow:'Заканчивается', filterNone:'Нет КЕГУ', filterFound:'Найдено', queuePending:'Не отправлено', queueRetry:'Дослать', queueSent:'Все записи отправлены', queueInfo:'записей ждут отправки', savedQueued:'Сохранено (нет сети — дошлём позже)', nothingFound:'Ничего не найдено' },
-  uz: { welcome:'Xush kelibsiz', welcomeDesc:'Boshlash uchun ismingizni kiriting', yourName:'Ismingiz', continue:'Davom etish', tabStock:'Qoldiq', tabIncome:'Kirim', tabExpense:'Chiqim', tabHistory:'Tarix', tabAccount:'Profil', totalKegu:'Jami KEGU', skuAvail:'Mavjud', noKegu:"KEGU yo'q", totalSku:'Jami SKU', bySku:"Mahsulotlar bo'yicha", needSync:"Ma'lumotlarni yuklash uchun ⟳ tugmasini bosing", incomeTitle:'Stiker kirimi', expenseTitle:'Stiker chiqimi', date:'Sana', product:'Mahsulot', selectProduct:'— Mahsulotni tanlang —', quantity:'Miqdor', quantityHint:'masalan 50000', scan:'Shtrix-kod', scanHint:'Kodni skanerlang yoki kiriting', scanNotFound:'Kod topilmadi', type:'Turi', comment:'Izoh', commentOpt:'ixtiyoriy', saveIncome:'＋ Kirimni saqlash', saveExpense:'－ Chiqimni saqlash', historyTitle:'Tarix', noHistory:"Hozircha yozuvlar yo'q.<br>Birinchi operatsiyadan keyin paydo bo'ladi", historyLocal:'Ushbu qurilmadagi yozuvlar', operator:'Operator', settings:'Sozlamalar', theme:'Mavzu', themeLight:"Yorug'", themeDark:"Qorong'i", themeAuto:'Avtomatik', language:'Til', russian:'Русский', uzbek:"O'zbek", changeName:"Ismni o'zgartirish", aboutApp:'Ilova haqida', version:'Versiya', errSelectProduct:'Mahsulotni tanlang', errQty:'Miqdorni kiriting', okSaved:'✓ Saqlandi', sending:'Yuborilmoqda...', loading:'Yuklanmoqda...', syncDone:'Yangilandi', syncErr:'Xato', notSet:'Belgilanmagan', none:"Yo'q", nothing:'—', confirmTitle:'Yozuvni tasdiqlang', confirmOp:'Operatsiya', confirmProduct:'Mahsulot', confirmQty:'Miqdor', confirmType:'Turi', confirmYes:'Tasdiqlash', confirmNo:'Bekor qilish', opIncome:'Kirim', opExpense:'Chiqim', searchPlaceholder:'Mahsulot qidirish...', filterAll:'Hammasi', filterLow:'Tugayapti', filterNone:"KEGU yo'q", filterFound:'Topildi', queuePending:'Yuborilmagan', queueRetry:'Qayta yuborish', queueSent:'Barcha yozuvlar yuborildi', queueInfo:'yozuv yuborishni kutmoqda', savedQueued:"Saqlandi (internet yo'q — keyinroq yuboriladi)", nothingFound:'Hech narsa topilmadi' }
+  ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', scan:'Штрих-код', scanHint:'Отсканируйте или введите код', scanNotFound:'Код не распознан', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—', confirmTitle:'Подтвердите запись', confirmOp:'Операция', confirmProduct:'Продукт', confirmQty:'Количество', confirmType:'Тип', confirmYes:'Подтвердить', confirmNo:'Отмена', opIncome:'Приход', opExpense:'Расход', searchPlaceholder:'Поиск продукта...', filterAll:'Все', filterLow:'Заканчивается', filterNone:'Нет КЕГУ', filterFound:'Найдено', queuePending:'Не отправлено', queueRetry:'Дослать', queueSent:'Все записи отправлены', queueInfo:'записей ждут отправки', savedQueued:'Сохранено (нет сети — дошлём позже)', nothingFound:'Ничего не найдено', tabInv:'Инвентаризация', invTitle:'Инвентаризация', invStart:'Начать инвентаризацию', invDesc:'Приложение проведёт вас по всем продуктам по очереди. Сначала КЕГУ, затем КЕТУ.', invProgress:'Позиция', invOf:'из', invKeguStep:'КЕГУ', invKetuStep:'КЕТУ (общий)', invEnterQty:'Введите количество', invNext:'Далее', invFinish:'Завершить', invKetuTitle:'Остаток КЕТУ', invKetuDesc:'Последний шаг — введите общий остаток КЕТУ', invDone:'Инвентаризация завершена!', invDoneDesc:'Все данные отправлены', invSending:'Отправка инвентаризации...', invConfirmExit:'Прервать инвентаризацию? Введённые данные не сохранятся.', invErrQty:'Введите количество (можно 0)', invSavedQueued:'Инвентаризация сохранена, дошлём при появлении сети', invResume:'Продолжить инвентаризацию', invNewStart:'Начать заново' },
+  uz: { welcome:'Xush kelibsiz', welcomeDesc:'Boshlash uchun ismingizni kiriting', yourName:'Ismingiz', continue:'Davom etish', tabStock:'Qoldiq', tabIncome:'Kirim', tabExpense:'Chiqim', tabHistory:'Tarix', tabAccount:'Profil', totalKegu:'Jami KEGU', skuAvail:'Mavjud', noKegu:"KEGU yo'q", totalSku:'Jami SKU', bySku:"Mahsulotlar bo'yicha", needSync:"Ma'lumotlarni yuklash uchun ⟳ tugmasini bosing", incomeTitle:'Stiker kirimi', expenseTitle:'Stiker chiqimi', date:'Sana', product:'Mahsulot', selectProduct:'— Mahsulotni tanlang —', quantity:'Miqdor', quantityHint:'masalan 50000', scan:'Shtrix-kod', scanHint:'Kodni skanerlang yoki kiriting', scanNotFound:'Kod topilmadi', type:'Turi', comment:'Izoh', commentOpt:'ixtiyoriy', saveIncome:'＋ Kirimni saqlash', saveExpense:'－ Chiqimni saqlash', historyTitle:'Tarix', noHistory:"Hozircha yozuvlar yo'q.<br>Birinchi operatsiyadan keyin paydo bo'ladi", historyLocal:'Ushbu qurilmadagi yozuvlar', operator:'Operator', settings:'Sozlamalar', theme:'Mavzu', themeLight:"Yorug'", themeDark:"Qorong'i", themeAuto:'Avtomatik', language:'Til', russian:'Русский', uzbek:"O'zbek", changeName:"Ismni o'zgartirish", aboutApp:'Ilova haqida', version:'Versiya', errSelectProduct:'Mahsulotni tanlang', errQty:'Miqdorni kiriting', okSaved:'✓ Saqlandi', sending:'Yuborilmoqda...', loading:'Yuklanmoqda...', syncDone:'Yangilandi', syncErr:'Xato', notSet:'Belgilanmagan', none:"Yo'q", nothing:'—', confirmTitle:'Yozuvni tasdiqlang', confirmOp:'Operatsiya', confirmProduct:'Mahsulot', confirmQty:'Miqdor', confirmType:'Turi', confirmYes:'Tasdiqlash', confirmNo:'Bekor qilish', opIncome:'Kirim', opExpense:'Chiqim', searchPlaceholder:'Mahsulot qidirish...', filterAll:'Hammasi', filterLow:'Tugayapti', filterNone:"KEGU yo'q", filterFound:'Topildi', queuePending:'Yuborilmagan', queueRetry:'Qayta yuborish', queueSent:'Barcha yozuvlar yuborildi', queueInfo:'yozuv yuborishni kutmoqda', savedQueued:"Saqlandi (internet yo'q — keyinroq yuboriladi)", nothingFound:'Hech narsa topilmadi', tabInv:'Inventarizatsiya', invTitle:'Inventarizatsiya', invStart:'Inventarizatsiyani boshlash', invDesc:'Ilova sizni barcha mahsulotlar bo\'ylab navbat bilan olib o\'tadi. Avval KEGU, keyin KETU.', invProgress:'Pozitsiya', invOf:'/', invKeguStep:'KEGU', invKetuStep:'KETU (umumiy)', invEnterQty:'Miqdorni kiriting', invNext:'Keyingi', invFinish:'Yakunlash', invKetuTitle:'KETU qoldig\'i', invKetuDesc:'Oxirgi qadam — umumiy KETU qoldig\'ini kiriting', invDone:'Inventarizatsiya yakunlandi!', invDoneDesc:'Barcha ma\'lumotlar yuborildi', invSending:'Inventarizatsiya yuborilmoqda...', invConfirmExit:'Inventarizatsiyani to\'xtatasizmi? Kiritilgan ma\'lumotlar saqlanmaydi.', invErrQty:'Miqdorni kiriting (0 bo\'lishi mumkin)', invSavedQueued:'Inventarizatsiya saqlandi, internet paydo bo\'lganda yuboriladi', invResume:'Inventarizatsiyani davom ettirish', invNewStart:'Qaytadan boshlash' }
 };
 
 const SKU_LIST = ["PEPSI - 2.25L PET 6х","PEPSI - 1,75L PET 6x","PEPSI 2L PET 6x","PEPSI 1.5L PET 6x","PEPSI 1L PET 12x","PEPSI 0,5L PET 24x","PEPSI 0.26L PET 24x","PEPSI 0.25L NRGB 12x","PEPSI 0.25L CAN 24x","PEPSI 0.449L CAN 24x","PEPSI ZERO 0.25L CAN 24x","PEPSI ZERO 0.25L NRGB 12x","PEPSI ZERO 0.5L PET 12x","PEPSI ZERO 1,5L PET 6x","MIRINDA 0.25L CAN 24x","MIRINDA 0.25L NRGB 12x","MIRINDA ORANGE 0.5L PET 12x","MIRINDA ORANGE 1.5L PET 6x","MIRINDA ORANGE 1L PET 6x","7UP 0.25L CAN 24x","7UP 0.25L NRGB 12x","7UP 0.5L PET 12x","7UP 1.5L PET 6x","7UP 1L PET 6x","LIPTON зел Клубника 0.5L PET 12x","LIPTON зел Клубника 1L PET 6x","LIPTON зел Лимон 0.5L PET 12x","LIPTON зел Лимон 1.5L PET 6x","LIPTON зел Лимон 1L PET 6x","LIPTON чер Малина 0.5L PET 12x","LIPTON зел Персик 1L PET 6x","LIPTON чер Малина 1.5L PET 6x","LIPTON чер Малина 1L PET 6x","LIPTON чер Персик 0.5L PET 12x","LIPTON зел Персик 0.5L PET 12x","LIPTON чер Персик 1L PET 6x","LIPTON черный HF Манго 0.5L PET 12x","LIPTON черный HF Манго 1L PET 6x","MOUNTAIN DEW 0.25L CAN 24x","MOUNTAIN DEW 0.5L PET 12x","MOUNTAIN DEW 1L PET 6x","ADRENALINE RUSH 0.25L CAN 24x","ADRENALINE RUSH 0.449L CAN 24x","ADRENALINE RUSH MANGO 0.449L CAN 24x","ROCKSTAR ORIGINAL 0.25L CAN 24x","ROCKSTAR ORIGINAL 0.449L CAN 24x","ROCKSTAR Гуава 0.449L CAN 12x","ROCKSTAR Персик 0.449L CAN 24x","STING - 0.3L PET 24x","STING - 0,449L PET 24x","7UP Moxito 0.449 CAN x12","7UP Moxito 500ml PET x12","7UP Moxito 1L PET x6","Lipton Green Mango 500ml PET  x12","Lipton Green Mango 1L PET x6","Lipton Green Mango 1,5L PET x6","Pepsi Twist 0,449 CAN x12","Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"];
@@ -444,7 +552,8 @@ const S = {
   history: JSON.parse(localStorage.getItem('historyLocal') || '[]'),
   queue: JSON.parse(localStorage.getItem('sendQueue') || '[]'),
   search: '',
-  filter: 'all'
+  filter: 'all',
+  inv: null
 };
 
 function t(k) { return I18N[S.lang][k] || k; }
@@ -888,6 +997,7 @@ function updateQueueBadge() {
 // Автоматически пробуем дослать очередь когда появилась сеть
 window.addEventListener('online', function() {
   if (S.queue.length > 0) retryQueue();
+  retryInvQueue();
 });
 
 function renderHistory() {
@@ -930,6 +1040,10 @@ function renderAccount() {
       '<div class="menu-item"><span class="menu-label">' + t('operator') + '</span><span class="menu-value">' + (S.operator || t('notSet')) + '</span></div>' +
       '<div class="menu-item" onclick="changeName()"><span class="menu-label" style="color:var(--accent)">' + t('changeName') + '</span></div>' +
     '</div>' +
+    '<div class="section-label">' + t('invTitle') + '</div>' +
+    '<div class="card-group">' +
+      '<div class="menu-item" onclick="startInventory()"><span class="menu-label" style="color:var(--accent)">' + t('invStart') + '</span><span class="menu-arrow">›</span></div>' +
+    '</div>' +
     '<div class="section-label">' + t('settings') + '</div>' +
     '<div class="card-group">' +
       '<div class="menu-item" onclick="toggleTheme()"><span class="menu-label">' + t('theme') + '</span><span class="menu-value">' + themeLabel + '<span class="menu-arrow">›</span></span></div>' +
@@ -937,8 +1051,174 @@ function renderAccount() {
     '</div>' +
     '<div class="section-label">' + t('aboutApp') + '</div>' +
     '<div class="card-group">' +
-      '<div class="menu-item"><span class="menu-label">' + t('version') + '</span><span class="menu-value">2.0</span></div>' +
+      '<div class="menu-item"><span class="menu-label">' + t('version') + '</span><span class="menu-value">2.1</span></div>' +
     '</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+//  ИНВЕНТАРИЗАЦИЯ
+// ═══════════════════════════════════════════════════════
+// Шаги: 0..58 = КЕГУ по каждому SKU, 59 = КЕТУ общий
+function startInventory() {
+  S.inv = {
+    step: 0,            // текущий индекс
+    results: [],        // [{product, qty}]
+    total: SKU_LIST.length + 1  // 59 SKU + 1 КЕТУ
+  };
+  document.getElementById('invScreen').classList.remove('hidden');
+  document.getElementById('invHeaderTitle').textContent = t('invTitle');
+  renderInvIntro();
+}
+
+function exitInventory() {
+  // Если инвентаризация в процессе — спросить подтверждение
+  if (S.inv && S.inv.step > 0 && S.inv.results.length > 0 && S.inv.step < S.inv.total) {
+    if (!confirm(t('invConfirmExit'))) return;
+  }
+  S.inv = null;
+  document.getElementById('invScreen').classList.add('hidden');
+}
+
+function renderInvIntro() {
+  document.getElementById('invProgressFill').style.width = '0%';
+  document.getElementById('invBody').innerHTML =
+    '<div class="inv-intro">' +
+      '<div class="inv-intro-icon">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+      '</div>' +
+      '<h2>' + t('invTitle') + '</h2>' +
+      '<p>' + t('invDesc') + '</p>' +
+      '<button class="inv-next-btn" style="margin-top:16px" onclick="invRenderStep()">' + t('invStart') + '</button>' +
+    '</div>';
+}
+
+function invRenderStep() {
+  const inv = S.inv;
+  if (!inv) return;
+  const isKetu = inv.step >= SKU_LIST.length;
+  const progress = Math.round((inv.step / inv.total) * 100);
+  document.getElementById('invProgressFill').style.width = progress + '%';
+
+  if (isKetu) {
+    // Последний шаг — КЕТУ
+    document.getElementById('invBody').innerHTML =
+      '<div class="inv-step-label">' + t('invProgress') + ' ' + inv.total + ' ' + t('invOf') + ' ' + inv.total + '</div>' +
+      '<div class="inv-badge ketu">' + t('invKetuStep') + '</div>' +
+      '<div class="inv-product-name">' + t('invKetuTitle') + '</div>' +
+      '<div class="inv-qty-label">' + t('invKetuDesc') + '</div>' +
+      '<input class="inv-qty-input" type="number" id="invQty" inputmode="numeric" min="0" placeholder="0" onkeydown="invQtyKey(event)">' +
+      '<button class="inv-next-btn finish" onclick="invNext()">' + t('invFinish') + '</button>' +
+      '<div class="inv-counter">' + t('invKetuStep') + '</div>';
+  } else {
+    const sku = SKU_LIST[inv.step];
+    document.getElementById('invBody').innerHTML =
+      '<div class="inv-step-label">' + t('invProgress') + ' ' + (inv.step+1) + ' ' + t('invOf') + ' ' + inv.total + '</div>' +
+      '<div class="inv-badge kegu">' + t('invKeguStep') + '</div>' +
+      '<div class="inv-product-name">' + sku + '</div>' +
+      '<div class="inv-qty-label">' + t('invEnterQty') + '</div>' +
+      '<input class="inv-qty-input" type="number" id="invQty" inputmode="numeric" min="0" placeholder="0" onkeydown="invQtyKey(event)">' +
+      '<button class="inv-next-btn" onclick="invNext()">' + t('invNext') + '</button>' +
+      '<div class="inv-counter">' + (inv.step+1) + ' / ' + inv.total + '</div>';
+  }
+  setTimeout(function(){ const q = document.getElementById('invQty'); if (q) q.focus(); }, 150);
+}
+
+function invQtyKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); invNext(); }
+}
+
+function invNext() {
+  const inv = S.inv;
+  if (!inv) return;
+  const qtyEl = document.getElementById('invQty');
+  const val = qtyEl ? qtyEl.value.trim() : '';
+  // Количество обязательно — но можно 0
+  if (val === '' || isNaN(Number(val)) || Number(val) < 0) {
+    toast(t('invErrQty'));
+    return;
+  }
+  const qty = Number(val);
+  const isKetu = inv.step >= SKU_LIST.length;
+  inv.results.push({
+    product: isKetu ? 'КЕТУ (общий)' : SKU_LIST[inv.step],
+    qty: qty,
+    isKetu: isKetu
+  });
+  inv.step++;
+  if (inv.step >= inv.total) {
+    finishInventory();
+  } else {
+    invRenderStep();
+  }
+}
+
+async function finishInventory() {
+  const inv = S.inv;
+  document.getElementById('invProgressFill').style.width = '100%';
+  document.getElementById('invBody').innerHTML =
+    '<div class="inv-intro"><div class="ring"></div>' +
+    '<p style="margin-top:14px">' + t('invSending') + '</p></div>';
+
+  const today = new Date().toISOString().slice(0,10);
+  let allSent = true;
+  // Отправляем каждую позицию в форму инвентаризации
+  for (const r of inv.results) {
+    try {
+      await submitInventoryRow(r.product, r.qty, today);
+    } catch(e) {
+      allSent = false;
+      // складываем в очередь инвентаризации
+      const invQueue = JSON.parse(localStorage.getItem('invQueue') || '[]');
+      invQueue.push({ product: r.product, qty: r.qty, date: today, operator: S.operator });
+      localStorage.setItem('invQueue', JSON.stringify(invQueue));
+    }
+  }
+
+  // Экран завершения
+  document.getElementById('invBody').innerHTML =
+    '<div class="inv-intro">' +
+      '<div class="inv-done-icon">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' +
+      '</div>' +
+      '<h2>' + t('invDone') + '</h2>' +
+      '<p>' + (allSent ? t('invDoneDesc') : t('invSavedQueued')) + '</p>' +
+      '<button class="inv-next-btn finish" style="margin-top:16px" onclick="exitInventory()">' + t('confirmYes') + '</button>' +
+    '</div>';
+  S.inv = null;
+}
+
+async function submitInventoryRow(product, qty, date) {
+  if (!navigator.onLine) throw new Error('offline');
+  const fd = new FormData();
+  const d = new Date(date);
+  fd.append(INV_FIELDS.date_year,  d.getFullYear());
+  fd.append(INV_FIELDS.date_month, d.getMonth()+1);
+  fd.append(INV_FIELDS.date_day,   d.getDate());
+  fd.append(INV_FIELDS.product,  product);
+  fd.append(INV_FIELDS.qty,      qty);
+  fd.append(INV_FIELDS.operator, S.operator || '');
+  const ctrl = new AbortController();
+  const tm = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    await fetch(INV_FORM_URL, { method:'POST', mode:'no-cors', body: fd, signal: ctrl.signal });
+  } finally {
+    clearTimeout(tm);
+  }
+}
+
+// Дослать очередь инвентаризации при появлении сети
+async function retryInvQueue() {
+  let invQueue = JSON.parse(localStorage.getItem('invQueue') || '[]');
+  if (!invQueue.length) return;
+  const stillFailed = [];
+  for (const r of invQueue) {
+    try {
+      await submitInventoryRow(r.product, r.qty, r.date);
+    } catch(e) {
+      stillFailed.push(r);
+    }
+  }
+  localStorage.setItem('invQueue', JSON.stringify(stillFailed));
 }
 
 function changeName() {
@@ -980,6 +1260,10 @@ if (S.operator) {
   // Если есть неотправленные записи и есть сеть — пробуем дослать
   if (S.queue.length > 0 && navigator.onLine) {
     setTimeout(retryQueue, 2000);
+  }
+  // Дослать очередь инвентаризации
+  if (navigator.onLine) {
+    setTimeout(retryInvQueue, 3000);
   }
 } else {
   setTimeout(() => document.getElementById('opName').focus(), 200);
