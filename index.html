@@ -256,6 +256,83 @@ body {
 }
 
 .empty { text-align: center; color: var(--text-tertiary); padding: 60px 20px; font-size: 15px; line-height: 1.5; }
+
+/* Confirm dialog */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  padding: 24px;
+}
+.modal.hidden { display: none; }
+.modal-box {
+  background: var(--bg-elevated); border-radius: 18px;
+  width: 100%; max-width: 360px; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+.modal-head {
+  padding: 20px 20px 8px; text-align: center;
+  font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+}
+.modal-body { padding: 8px 20px 16px; }
+.modal-line {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 0; border-bottom: 0.5px solid var(--separator);
+  font-size: 15px;
+}
+.modal-line:last-child { border-bottom: none; }
+.modal-line .ml-label { color: var(--text-tertiary); }
+.modal-line .ml-value { font-weight: 600; text-align: right; }
+.modal-actions { display: flex; border-top: 0.5px solid var(--separator); }
+.modal-btn {
+  flex: 1; padding: 15px; border: none; background: transparent;
+  font-family: inherit; font-size: 16px; cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-btn:active { background: var(--gray5); }
+.modal-btn.cancel { color: var(--text-tertiary); border-right: 0.5px solid var(--separator); }
+.modal-btn.confirm { color: var(--accent); font-weight: 700; }
+.modal-btn.confirm.income { color: var(--green); }
+.modal-btn.confirm.expense { color: var(--red); }
+
+/* Search box */
+.search-box {
+  background: var(--gray5); border-radius: 10px;
+  display: flex; align-items: center; padding: 8px 12px; gap: 8px;
+  margin-bottom: 10px;
+}
+.search-box svg { width: 16px; height: 16px; color: var(--text-tertiary); flex-shrink: 0; }
+.search-box input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: inherit; font-size: 16px; color: var(--text);
+}
+.search-box input::placeholder { color: var(--text-tertiary); }
+.filter-chips { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.chip {
+  padding: 6px 13px; border-radius: 16px; border: none;
+  background: var(--gray5); color: var(--text); font-family: inherit;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+}
+.chip.active { background: var(--accent); color: #fff; }
+
+/* Queue badge */
+.queue-banner {
+  background: rgba(255,149,0,0.12); border: 1px solid rgba(255,149,0,0.3);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.queue-banner .qb-text { font-size: 13px; color: var(--orange); font-weight: 500; }
+.queue-banner .qb-btn {
+  background: var(--orange); color: #fff; border: none; border-radius: 8px;
+  padding: 7px 14px; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.tab-dot {
+  position: absolute; top: 4px; right: 50%; margin-right: -16px;
+  width: 8px; height: 8px; background: var(--orange);
+  border-radius: 50%; border: 1.5px solid var(--tab-bg);
+}
+.tab { position: relative; }
 ::-webkit-scrollbar { display: none; }
 </style>
 </head>
@@ -269,6 +346,18 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal hidden" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-head" id="cmTitle">Подтвердите запись</div>
+    <div class="modal-body" id="cmBody"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="cmCancel" onclick="closeConfirm()">Отмена</button>
+      <button class="modal-btn confirm" id="cmConfirm">Подтвердить</button>
+    </div>
+  </div>
+</div>
 
 <!-- SETUP -->
 <div class="setup" id="setup">
@@ -338,11 +427,13 @@ const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
 const STOCK_CSV = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Отчет остатока кегу-кету');
 
 const I18N = {
-  ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—' },
-  uz: { welcome:'Xush kelibsiz', welcomeDesc:'Boshlash uchun ismingizni kiriting', yourName:'Ismingiz', continue:'Davom etish', tabStock:'Qoldiq', tabIncome:'Kirim', tabExpense:'Chiqim', tabHistory:'Tarix', tabAccount:'Profil', totalKegu:'Jami KEGU', skuAvail:'Mavjud', noKegu:"KEGU yo'q", totalSku:'Jami SKU', bySku:"Mahsulotlar bo'yicha", needSync:"Ma'lumotlarni yuklash uchun ⟳ tugmasini bosing", incomeTitle:'Stiker kirimi', expenseTitle:'Stiker chiqimi', date:'Sana', product:'Mahsulot', selectProduct:'— Mahsulotni tanlang —', quantity:'Miqdor', quantityHint:'masalan 50000', type:'Turi', comment:'Izoh', commentOpt:'ixtiyoriy', saveIncome:'＋ Kirimni saqlash', saveExpense:'－ Chiqimni saqlash', historyTitle:'Tarix', noHistory:"Hozircha yozuvlar yo'q.<br>Birinchi operatsiyadan keyin paydo bo'ladi", historyLocal:'Ushbu qurilmadagi yozuvlar', operator:'Operator', settings:'Sozlamalar', theme:'Mavzu', themeLight:"Yorug'", themeDark:"Qorong'i", themeAuto:'Avtomatik', language:'Til', russian:'Русский', uzbek:"O'zbek", changeName:"Ismni o'zgartirish", aboutApp:'Ilova haqida', version:'Versiya', errSelectProduct:'Mahsulotni tanlang', errQty:'Miqdorni kiriting', okSaved:'✓ Saqlandi', sending:'Yuborilmoqda...', loading:'Yuklanmoqda...', syncDone:'Yangilandi', syncErr:'Xato', notSet:'Belgilanmagan', none:"Yo'q", nothing:'—' }
+  ru: { welcome:'Добро пожаловать', welcomeDesc:'Введите ваше имя для начала работы', yourName:'Ваше имя', continue:'Продолжить', tabStock:'Остатки', tabIncome:'Приход', tabExpense:'Расход', tabHistory:'История', tabAccount:'Профиль', totalKegu:'Всего КЕГУ', skuAvail:'В наличии', noKegu:'Нет КЕГУ', totalSku:'Всего SKU', bySku:'По продуктам', needSync:'Нажмите ⟳ для загрузки данных', incomeTitle:'Приход стикеров', expenseTitle:'Расход стикеров', date:'Дата', product:'Продукт', selectProduct:'— Выберите продукт —', quantity:'Количество', quantityHint:'напр. 50000', scan:'Штрих-код', scanHint:'Отсканируйте или введите код', scanNotFound:'Код не распознан', type:'Тип', comment:'Комментарий', commentOpt:'необязательно', saveIncome:'＋ Записать приход', saveExpense:'－ Записать расход', historyTitle:'История', noHistory:'Пока нет записей.<br>Они появятся после первой операции', historyLocal:'Записи на этом устройстве', operator:'Оператор', settings:'Настройки', theme:'Тема', themeLight:'Светлая', themeDark:'Тёмная', themeAuto:'Авто', language:'Язык', russian:'Русский', uzbek:"O'zbek", changeName:'Изменить имя', aboutApp:'О приложении', version:'Версия', errSelectProduct:'Выберите продукт', errQty:'Укажите количество', okSaved:'✓ Записано', sending:'Отправка...', loading:'Загрузка...', syncDone:'Обновлено', syncErr:'Ошибка', notSet:'Не указано', none:'Нет', nothing:'—', confirmTitle:'Подтвердите запись', confirmOp:'Операция', confirmProduct:'Продукт', confirmQty:'Количество', confirmType:'Тип', confirmYes:'Подтвердить', confirmNo:'Отмена', opIncome:'Приход', opExpense:'Расход', searchPlaceholder:'Поиск продукта...', filterAll:'Все', filterLow:'Заканчивается', filterNone:'Нет КЕГУ', filterFound:'Найдено', queuePending:'Не отправлено', queueRetry:'Дослать', queueSent:'Все записи отправлены', queueInfo:'записей ждут отправки', savedQueued:'Сохранено (нет сети — дошлём позже)', nothingFound:'Ничего не найдено' },
+  uz: { welcome:'Xush kelibsiz', welcomeDesc:'Boshlash uchun ismingizni kiriting', yourName:'Ismingiz', continue:'Davom etish', tabStock:'Qoldiq', tabIncome:'Kirim', tabExpense:'Chiqim', tabHistory:'Tarix', tabAccount:'Profil', totalKegu:'Jami KEGU', skuAvail:'Mavjud', noKegu:"KEGU yo'q", totalSku:'Jami SKU', bySku:"Mahsulotlar bo'yicha", needSync:"Ma'lumotlarni yuklash uchun ⟳ tugmasini bosing", incomeTitle:'Stiker kirimi', expenseTitle:'Stiker chiqimi', date:'Sana', product:'Mahsulot', selectProduct:'— Mahsulotni tanlang —', quantity:'Miqdor', quantityHint:'masalan 50000', scan:'Shtrix-kod', scanHint:'Kodni skanerlang yoki kiriting', scanNotFound:'Kod topilmadi', type:'Turi', comment:'Izoh', commentOpt:'ixtiyoriy', saveIncome:'＋ Kirimni saqlash', saveExpense:'－ Chiqimni saqlash', historyTitle:'Tarix', noHistory:"Hozircha yozuvlar yo'q.<br>Birinchi operatsiyadan keyin paydo bo'ladi", historyLocal:'Ushbu qurilmadagi yozuvlar', operator:'Operator', settings:'Sozlamalar', theme:'Mavzu', themeLight:"Yorug'", themeDark:"Qorong'i", themeAuto:'Avtomatik', language:'Til', russian:'Русский', uzbek:"O'zbek", changeName:"Ismni o'zgartirish", aboutApp:'Ilova haqida', version:'Versiya', errSelectProduct:'Mahsulotni tanlang', errQty:'Miqdorni kiriting', okSaved:'✓ Saqlandi', sending:'Yuborilmoqda...', loading:'Yuklanmoqda...', syncDone:'Yangilandi', syncErr:'Xato', notSet:'Belgilanmagan', none:"Yo'q", nothing:'—', confirmTitle:'Yozuvni tasdiqlang', confirmOp:'Operatsiya', confirmProduct:'Mahsulot', confirmQty:'Miqdor', confirmType:'Turi', confirmYes:'Tasdiqlash', confirmNo:'Bekor qilish', opIncome:'Kirim', opExpense:'Chiqim', searchPlaceholder:'Mahsulot qidirish...', filterAll:'Hammasi', filterLow:'Tugayapti', filterNone:"KEGU yo'q", filterFound:'Topildi', queuePending:'Yuborilmagan', queueRetry:'Qayta yuborish', queueSent:'Barcha yozuvlar yuborildi', queueInfo:'yozuv yuborishni kutmoqda', savedQueued:"Saqlandi (internet yo'q — keyinroq yuboriladi)", nothingFound:'Hech narsa topilmadi' }
 };
 
 const SKU_LIST = ["PEPSI - 2.25L PET 6х","PEPSI - 1,75L PET 6x","PEPSI 2L PET 6x","PEPSI 1.5L PET 6x","PEPSI 1L PET 12x","PEPSI 0,5L PET 24x","PEPSI 0.26L PET 24x","PEPSI 0.25L NRGB 12x","PEPSI 0.25L CAN 24x","PEPSI 0.449L CAN 24x","PEPSI ZERO 0.25L CAN 24x","PEPSI ZERO 0.25L NRGB 12x","PEPSI ZERO 0.5L PET 12x","PEPSI ZERO 1,5L PET 6x","MIRINDA 0.25L CAN 24x","MIRINDA 0.25L NRGB 12x","MIRINDA ORANGE 0.5L PET 12x","MIRINDA ORANGE 1.5L PET 6x","MIRINDA ORANGE 1L PET 6x","7UP 0.25L CAN 24x","7UP 0.25L NRGB 12x","7UP 0.5L PET 12x","7UP 1.5L PET 6x","7UP 1L PET 6x","LIPTON зел Клубника 0.5L PET 12x","LIPTON зел Клубника 1L PET 6x","LIPTON зел Лимон 0.5L PET 12x","LIPTON зел Лимон 1.5L PET 6x","LIPTON зел Лимон 1L PET 6x","LIPTON чер Малина 0.5L PET 12x","LIPTON зел Персик 1L PET 6x","LIPTON чер Малина 1.5L PET 6x","LIPTON чер Малина 1L PET 6x","LIPTON чер Персик 0.5L PET 12x","LIPTON зел Персик 0.5L PET 12x","LIPTON чер Персик 1L PET 6x","LIPTON черный HF Манго 0.5L PET 12x","LIPTON черный HF Манго 1L PET 6x","MOUNTAIN DEW 0.25L CAN 24x","MOUNTAIN DEW 0.5L PET 12x","MOUNTAIN DEW 1L PET 6x","ADRENALINE RUSH 0.25L CAN 24x","ADRENALINE RUSH 0.449L CAN 24x","ADRENALINE RUSH MANGO 0.449L CAN 24x","ROCKSTAR ORIGINAL 0.25L CAN 24x","ROCKSTAR ORIGINAL 0.449L CAN 24x","ROCKSTAR Гуава 0.449L CAN 12x","ROCKSTAR Персик 0.449L CAN 24x","STING - 0.3L PET 24x","STING - 0,449L PET 24x","7UP Moxito 0.449 CAN x12","7UP Moxito 500ml PET x12","7UP Moxito 1L PET x6","Lipton Green Mango 500ml PET  x12","Lipton Green Mango 1L PET x6","Lipton Green Mango 1,5L PET x6","Pepsi Twist 0,449 CAN x12","Pepsi Twist 500ml PET x12","Pepsi Twist 1L PET x12"];
+
+const BARCODES = {"14780022622369": "PEPSI - 2.25L PET 6х", "4780022622362": "PEPSI - 2.25L PET 6х", "14780022622376": "PEPSI - 1,75L PET 6x", "4780022622379": "PEPSI - 1,75L PET 6x", "14780022621324": "PEPSI 2L PET 6x", "4780022621327": "PEPSI 2L PET 6x", "4780022620184": "PEPSI 1.5L PET 6x", "4780022620177": "PEPSI 1.5L PET 6x", "14780022620150": "PEPSI 1L PET 12x", "4780022620153": "PEPSI 1L PET 12x", "14780022620136": "PEPSI 0,5L PET 24x", "4780022620139": "PEPSI 0,5L PET 24x", "14780022621850": "PEPSI 0.26L PET 24x", "4780022621853": "PEPSI 0.26L PET 24x", "14780022621942": "PEPSI 0.25L NRGB 12x", "4780022621945": "PEPSI 0.25L NRGB 12x", "14780022620945": "PEPSI 0.25L CAN 24x", "4780022620948": "PEPSI 0.25L CAN 24x", "14780022621300": "PEPSI 0.449L CAN 24x", "4780022621303": "PEPSI 0.449L CAN 24x", "14780022622130": "PEPSI ZERO 0.25L CAN 24x", "4780022622133": "PEPSI ZERO 0.25L CAN 24x", "14780022622079": "PEPSI ZERO 0.25L NRGB 12x", "4780022622072": "PEPSI ZERO 0.25L NRGB 12x", "14780022622093": "PEPSI ZERO 0.5L PET 12x", "4780022622096": "PEPSI ZERO 0.5L PET 12x", "14780022622116": "PEPSI ZERO 1,5L PET 6x", "4780022622119": "PEPSI ZERO 1,5L PET 6x", "14780022620952": "MIRINDA 0.25L CAN 24x", "4780022620955": "MIRINDA 0.25L CAN 24x", "14780022621959": "MIRINDA 0.25L NRGB 12x", "4780022621952": "MIRINDA 0.25L NRGB 12x", "4780022622409": "MIRINDA ORANGE 0.5L PET 12x", "4780022620078": "MIRINDA ORANGE 0.5L PET 12x", "14780022620112": "MIRINDA ORANGE 1.5L PET 6x", "4780022620115": "MIRINDA ORANGE 1.5L PET 6x", "14780022620099": "MIRINDA ORANGE 1L PET 6x", "4780022620092": "MIRINDA ORANGE 1L PET 6x", "14780022620969": "7UP 0.25L CAN 24x", "4780022620962": "7UP 0.25L CAN 24x", "14780022621966": "7UP 0.25L NRGB 12x", "4780022621969": "7UP 0.25L NRGB 12x", "14780022620310": "7UP 0.5L PET 12x", "4780022620313": "7UP 0.5L PET 12x", "14780022620358": "7UP 1.5L PET 6x", "4780022620351": "7UP 1.5L PET 6x", "14780022620334": "7UP 1L PET 6x", "4780022620337": "7UP 1L PET 6x", "14780022622192": "LIPTON зел Клубника 0.5L PET 12x", "4780022622195": "LIPTON зел Клубника 0.5L PET 12x", "14780022622208": "LIPTON зел Клубника 1L PET 6x", "4780022622201": "LIPTON зел Клубника 1L PET 6x", "14780022620495": "LIPTON зел Лимон 0.5L PET 12x", "4780022620498": "LIPTON зел Лимон 0.5L PET 12x", "14780022620853": "LIPTON зел Лимон 1.5L PET 6x", "4780022620856": "LIPTON зел Лимон 1.5L PET 6x", "14780022620501": "LIPTON зел Лимон 1L PET 6x", "4780022620504": "LIPTON зел Лимон 1L PET 6x", "14780022620556": "LIPTON чер Малина 0.5L PET 12x", "4780022620559": "LIPTON чер Малина 0.5L PET 12x", "14780022621041": "LIPTON зел Персик 1L PET 6x", "4780022621044": "LIPTON зел Персик 1L PET 6x", "14780022620846": "LIPTON чер Малина 1.5L PET 6x", "4780022620849": "LIPTON чер Малина 1.5L PET 6x", "14780022620563": "LIPTON чер Малина 1L PET 6x", "4780022620566": "LIPTON чер Малина 1L PET 6x", "14780022620532": "LIPTON чер Персик 0.5L PET 12x", "4780022620535": "LIPTON чер Персик 0.5L PET 12x", "14780022621058": "LIPTON зел Персик 0.5L PET 12x", "4780022621051": "LIPTON зел Персик 0.5L PET 12x", "14780022620549": "LIPTON чер Персик 1L PET 6x", "4780022620542": "LIPTON чер Персик 1L PET 6x", "14780022622314": "LIPTON черный HF Манго 0.5L PET 12x", "4780022622317": "LIPTON черный HF Манго 0.5L PET 12x", "14780022622321": "LIPTON черный HF Манго 1L PET 6x", "4780022622324": "LIPTON черный HF Манго 1L PET 6x", "14780022621645": "MOUNTAIN DEW 0.25L CAN 24x", "4780022621648": "MOUNTAIN DEW 0.25L CAN 24x", "14780022621621": "MOUNTAIN DEW 0.5L PET 12x", "4780022621624": "MOUNTAIN DEW 0.5L PET 12x", "14780022621638": "MOUNTAIN DEW 1L PET 6x", "4780022621631": "MOUNTAIN DEW 1L PET 6x", "14780022620938": "ADRENALINE RUSH 0.25L CAN 24x", "4780022620931": "ADRENALINE RUSH 0.25L CAN 24x", "14780022621096": "ADRENALINE RUSH 0.449L CAN 24x", "4780022621099": "ADRENALINE RUSH 0.449L CAN 24x", "14780022622277": "ADRENALINE RUSH MANGO 0.449L CAN 24x", "4780022622270": "ADRENALINE RUSH MANGO 0.449L CAN 24x", "14780022621584": "ROCKSTAR ORIGINAL 0.25L CAN 24x", "4780022621587": "ROCKSTAR ORIGINAL 0.25L CAN 24x", "14780022621591": "ROCKSTAR ORIGINAL 0.449L CAN 24x", "4780022621594": "ROCKSTAR ORIGINAL 0.449L CAN 24x", "14780022622246": "ROCKSTAR Гуава 0.449L CAN 12x", "4780022622249": "ROCKSTAR Гуава 0.449L CAN 12x", "14780022622215": "ROCKSTAR Персик 0.449L CAN 24x", "4780022622218": "ROCKSTAR Персик 0.449L CAN 24x", "14780022622352": "STING - 0.3L PET 24x", "4780022622355": "STING - 0.3L PET 24x", "14780022622468": "STING - 0,449L PET 24x", "4780022622461": "STING - 0,449L PET 24x", "14780022622505": "7UP Moxito 0.449 CAN x12", "4780022622508": "7UP Moxito 0.449 CAN x12", "14780022622512": "7UP Moxito 500ml PET x12", "4780022622515": "7UP Moxito 500ml PET x12", "14780022622529": "7UP Moxito 1L PET x6", "4780022622522": "7UP Moxito 1L PET x6", "14780022622536": "Lipton Green Mango 500ml PET  x12", "4780022622539": "Lipton Green Mango 500ml PET  x12", "14780022622543": "Lipton Green Mango 1L PET x6", "4780022622546": "Lipton Green Mango 1L PET x6", "14780022622550": "Lipton Green Mango 1,5L PET x6", "4780022622553": "Lipton Green Mango 1,5L PET x6", "24780022622472": "Pepsi Twist 0,449 CAN x12", "4780022622478": "Pepsi Twist 0,449 CAN x12", "24780022622489": "Pepsi Twist 500ml PET x12", "4780022622485": "Pepsi Twist 500ml PET x12", "14780022622499": "Pepsi Twist 1L PET x12", "4780022622492": "Pepsi Twist 1L PET x12"};
 
 const S = {
   tab:'stock', keType:'КЕГУ',
@@ -350,7 +441,10 @@ const S = {
   theme: localStorage.getItem('theme') || 'auto',
   lang: localStorage.getItem('lang') || 'ru',
   stock: JSON.parse(localStorage.getItem('stockCache') || '[]'),
-  history: JSON.parse(localStorage.getItem('historyLocal') || '[]')
+  history: JSON.parse(localStorage.getItem('historyLocal') || '[]'),
+  queue: JSON.parse(localStorage.getItem('sendQueue') || '[]'),
+  search: '',
+  filter: 'all'
 };
 
 function t(k) { return I18N[S.lang][k] || k; }
@@ -453,6 +547,8 @@ async function loadStock(manual) {
 }
 
 async function submitToForm(entry) {
+  // Проверяем сеть заранее
+  if (!navigator.onLine) throw new Error('offline');
   const fd = new FormData();
   const d = new Date(entry.date);
   fd.append(FORM_FIELDS.date_year,  d.getFullYear());
@@ -467,7 +563,14 @@ async function submitToForm(entry) {
   fd.append(FORM_FIELDS.opType,  entry.type === 'income' ? 'Приход' : 'Расход');
   const ketuMark = entry.keType === 'КЕТУ' ? '[КЕТУ-общий] ' : '';
   fd.append(FORM_FIELDS.comment, ketuMark + (entry.comment || '') + (S.operator ? ' [' + S.operator + ']' : ''));
-  await fetch(FORM_URL, { method:'POST', mode:'no-cors', body: fd });
+  // Таймаут 12 секунд — если сеть очень медленная, считаем что не отправилось
+  const ctrl = new AbortController();
+  const tm = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    await fetch(FORM_URL, { method:'POST', mode:'no-cors', body: fd, signal: ctrl.signal });
+  } finally {
+    clearTimeout(tm);
+  }
 }
 
 function switchTab(tab) {
@@ -489,16 +592,46 @@ function renderStock() {
   const total = d.reduce((s,r) => s + r.kegu, 0);
   const withKe = d.filter(r => r.kegu > 0).length;
   const noKe   = d.filter(r => r.kegu === 0).length;
+  const ketuCls = ketuGlobal === 0 ? 'c-red' : (ketuGlobal < 20000 ? 'c-orange' : 'c-green');
+
+  // Фильтрация списка
+  let filtered = d.slice();
+  if (S.filter === 'low')  filtered = filtered.filter(r => r.kegu > 0 && r.kegu < 20000);
+  if (S.filter === 'none') filtered = filtered.filter(r => r.kegu === 0);
+  if (S.search.trim()) {
+    const q = S.search.trim().toLowerCase();
+    filtered = filtered.filter(r => r.name.toLowerCase().indexOf(q) !== -1);
+  }
+
   let skuHtml = '';
   if (d.length) {
-    skuHtml = '<div class="card-group">' + d.map(r => {
-      const cls = r.kegu === 0 ? 'none' : (r.kegu < 20000 ? 'low' : 'ok');
-      return '<div class="card-row"><div class="sku-name">' + r.name + '</div><div class="sku-val ' + cls + '">' + (r.kegu === 0 ? t('none') : r.kegu.toLocaleString('ru')) + '</div></div>';
-    }).join('') + '</div>';
+    if (filtered.length) {
+      skuHtml = '<div class="card-group">' + filtered.map(r => {
+        const cls = r.kegu === 0 ? 'none' : (r.kegu < 20000 ? 'low' : 'ok');
+        return '<div class="card-row"><div class="sku-name">' + r.name + '</div><div class="sku-val ' + cls + '">' + (r.kegu === 0 ? t('none') : r.kegu.toLocaleString('ru')) + '</div></div>';
+      }).join('') + '</div>';
+    } else {
+      skuHtml = '<div class="empty">' + t('nothingFound') + '</div>';
+    }
   } else {
     skuHtml = '<div class="empty">' + t('needSync') + '</div>';
   }
-  const ketuCls = ketuGlobal === 0 ? 'c-red' : (ketuGlobal < 20000 ? 'c-orange' : 'c-green');
+
+  // Блок поиска и фильтров показываем только если есть данные
+  let searchHtml = '';
+  if (d.length) {
+    searchHtml =
+      '<div class="search-box">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>' +
+        '<input type="text" id="stockSearch" placeholder="' + t('searchPlaceholder') + '" value="' + S.search.replace(/"/g,'&quot;') + '" oninput="onStockSearch(this.value)">' +
+      '</div>' +
+      '<div class="filter-chips">' +
+        '<button class="chip ' + (S.filter==='all'?'active':'') + '" onclick="setStockFilter(\'all\')">' + t('filterAll') + ' · ' + d.length + '</button>' +
+        '<button class="chip ' + (S.filter==='low'?'active':'') + '" onclick="setStockFilter(\'low\')">' + t('filterLow') + '</button>' +
+        '<button class="chip ' + (S.filter==='none'?'active':'') + '" onclick="setStockFilter(\'none\')">' + t('filterNone') + ' · ' + noKe + '</button>' +
+      '</div>';
+  }
+
   document.getElementById('content').innerHTML =
     '<div class="section-title">' + t('tabStock') + '</div>' +
     '<div class="stat-grid">' +
@@ -507,7 +640,32 @@ function renderStock() {
       '<div class="stat"><div class="stat-label">' + t('skuAvail') + '</div><div class="stat-value c-green">' + withKe + '</div></div>' +
       '<div class="stat"><div class="stat-label">' + t('noKegu') + '</div><div class="stat-value c-red">' + noKe + '</div></div>' +
     '</div>' +
-    '<div class="section-label">' + t('bySku') + '</div>' + skuHtml;
+    '<div class="section-label">' + t('bySku') + '</div>' +
+    searchHtml + skuHtml;
+}
+
+let searchTimer;
+function onStockSearch(val) {
+  S.search = val;
+  // Перерисовываем только список, не теряя фокус — через debounce
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(function() {
+    const active = document.activeElement;
+    const wasSearching = active && active.id === 'stockSearch';
+    const caretPos = wasSearching ? active.selectionStart : null;
+    renderStock();
+    if (wasSearching) {
+      const newInput = document.getElementById('stockSearch');
+      if (newInput) {
+        newInput.focus();
+        if (caretPos !== null) newInput.setSelectionRange(caretPos, caretPos);
+      }
+    }
+  }, 200);
+}
+function setStockFilter(f) {
+  S.filter = f;
+  renderStock();
 }
 
 function renderForm(type) {
@@ -519,28 +677,94 @@ function renderForm(type) {
     '<div class="section-title">' + (isIncome ? t('incomeTitle') : t('expenseTitle')) + '</div>' +
     '<div class="card-group">' +
       '<div class="form-row"><label class="form-label">' + t('date') + '</label><input class="form-input" type="date" id="fDate" value="' + today + '"></div>' +
-      '<div class="form-row" id="skuRow"><label class="form-label">' + t('product') + '</label><select class="form-select" id="fSku"><option value="">' + t('selectProduct') + '</option>' + opts + '</select></div>' +
+      '<div class="form-row" id="scanRow"><label class="form-label">' + t('scan') + '</label>' +
+        '<div style="display:flex; align-items:center; gap:8px">' +
+          '<input class="form-input" type="text" id="fScan" placeholder="' + t('scanHint') + '" autocomplete="off" inputmode="none" onkeydown="onScanKey(event)" style="flex:1">' +
+          '<button type="button" onclick="clearScan()" style="background:var(--gray5); border:none; border-radius:8px; width:30px; height:30px; color:var(--text-tertiary); font-size:16px; cursor:pointer; flex-shrink:0">✕</button>' +
+        '</div>' +
+        '<div id="scanResult" style="font-size:13px; margin-top:6px; min-height:16px"></div>' +
+      '</div>' +
+      '<div class="form-row" id="skuRow"><label class="form-label">' + t('product') + '</label><select class="form-select" id="fSku" onchange="onSkuChange()"><option value="">' + t('selectProduct') + '</option>' + opts + '</select></div>' +
       '<div class="form-row"><label class="form-label">' + t('quantity') + '</label><input class="form-input" type="number" id="fQty" placeholder="' + t('quantityHint') + '" inputmode="numeric" min="1"></div>' +
       '<div class="form-row"><label class="form-label">' + t('type') + '</label><div class="segmented" id="keToggle"><button class="seg-btn active" onclick="setKe(\'КЕГУ\')">КЕГУ</button><button class="seg-btn" onclick="setKe(\'КЕТУ\')">КЕТУ</button></div></div>' +
       '<div class="form-row"><label class="form-label">' + t('comment') + '</label><input class="form-input" type="text" id="fComment" placeholder="' + t('commentOpt') + '"></div>' +
     '</div>' +
     '<button class="submit-btn ' + type + '" id="submitBtn" onclick="submitEntry(\'' + type + '\')">' + (isIncome ? t('saveIncome') : t('saveExpense')) + '</button>';
+  // Автофокус на поле сканера — сканер ТСД печатает прямо в него
+  setTimeout(function(){ const fs = document.getElementById('fScan'); if (fs) fs.focus(); }, 150);
+}
+
+// Обработка ввода со сканера: сканер ТСД эмулирует клавиатуру и в конце шлёт Enter
+function onScanKey(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    processScan();
+  }
+}
+
+function processScan() {
+  const input = document.getElementById('fScan');
+  const result = document.getElementById('scanResult');
+  if (!input) return;
+  let code = input.value.trim();
+  if (!code) return;
+  // Убираем всё кроме цифр (на случай мусорных символов от сканера)
+  code = code.replace(/\D/g, '');
+  const sku = BARCODES[code];
+  if (sku) {
+    const fSku = document.getElementById('fSku');
+    if (fSku) {
+      fSku.value = sku;
+      // если КЕТУ был выбран — вернуть на КЕГУ т.к. отсканировали конкретный продукт
+      if (S.keType === 'КЕТУ') setKe('КЕГУ');
+    }
+    result.textContent = '✓ ' + sku;
+    result.style.color = 'var(--green)';
+    input.value = '';
+    // Перевести фокус на количество
+    const fQty = document.getElementById('fQty');
+    if (fQty) fQty.focus();
+  } else {
+    result.textContent = '✕ ' + t('scanNotFound') + ' (' + code + ')';
+    result.style.color = 'var(--red)';
+    input.value = '';
+  }
+}
+
+function clearScan() {
+  const input = document.getElementById('fScan');
+  const result = document.getElementById('scanResult');
+  if (input) { input.value = ''; input.focus(); }
+  if (result) { result.textContent = ''; }
+}
+
+// Когда продукт выбран вручную из списка — показать это в области результата
+function onSkuChange() {
+  const fSku = document.getElementById('fSku');
+  const result = document.getElementById('scanResult');
+  if (fSku && result && fSku.value) {
+    result.textContent = '✓ ' + fSku.value;
+    result.style.color = 'var(--green)';
+  }
 }
 
 function setKe(ke) {
   S.keType = ke;
   document.querySelectorAll('#keToggle .seg-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#keToggle .seg-btn')[ke === 'КЕГУ' ? 0 : 1].classList.add('active');
-  // Скрываем/показываем поле продукта в зависимости от КЕГУ/КЕТУ
+  // Скрываем/показываем поле продукта и сканера в зависимости от КЕГУ/КЕТУ
   const skuRow = document.getElementById('skuRow');
-  if (skuRow) {
-    if (ke === 'КЕТУ') {
+  const scanRow = document.getElementById('scanRow');
+  if (ke === 'КЕТУ') {
+    if (skuRow) {
       skuRow.style.display = 'none';
       const fSku = document.getElementById('fSku');
       if (fSku) fSku.selectedIndex = 0;
-    } else {
-      skuRow.style.display = '';
     }
+    if (scanRow) scanRow.style.display = 'none';
+  } else {
+    if (skuRow) skuRow.style.display = '';
+    if (scanRow) scanRow.style.display = '';
   }
 }
 
@@ -553,42 +777,148 @@ async function submitEntry(type) {
   if (S.keType === 'КЕГУ' && !sku) { toast(t('errSelectProduct')); return; }
   if (!qty || qty <= 0) { toast(t('errQty')); return; }
   const entry = { type, date, sku, qty, comment, keType: S.keType, operator: S.operator, ts: Date.now() };
-  document.getElementById('submitBtn').disabled = true;
+  // Показываем окно подтверждения
+  showConfirm(entry);
+}
+
+// ── Окно подтверждения ──────────────────────────────────
+function showConfirm(entry) {
+  const isIncome = entry.type === 'income';
+  const opLabel = isIncome ? t('opIncome') : t('opExpense');
+  const productLine = entry.keType === 'КЕТУ'
+    ? '<div class="modal-line"><span class="ml-label">' + t('confirmProduct') + '</span><span class="ml-value">КЕТУ (общий)</span></div>'
+    : '<div class="modal-line"><span class="ml-label">' + t('confirmProduct') + '</span><span class="ml-value">' + entry.sku + '</span></div>';
+  document.getElementById('cmTitle').textContent = t('confirmTitle');
+  document.getElementById('cmBody').innerHTML =
+    '<div class="modal-line"><span class="ml-label">' + t('confirmOp') + '</span><span class="ml-value" style="color:' + (isIncome ? 'var(--green)' : 'var(--red)') + '">' + opLabel + '</span></div>' +
+    productLine +
+    '<div class="modal-line"><span class="ml-label">' + t('confirmQty') + '</span><span class="ml-value">' + entry.qty.toLocaleString('ru') + '</span></div>' +
+    '<div class="modal-line"><span class="ml-label">' + t('confirmType') + '</span><span class="ml-value">' + entry.keType + '</span></div>' +
+    '<div class="modal-line"><span class="ml-label">' + t('date') + '</span><span class="ml-value">' + entry.date + '</span></div>';
+  document.getElementById('cmCancel').textContent = t('confirmNo');
+  const confirmBtn = document.getElementById('cmConfirm');
+  confirmBtn.textContent = t('confirmYes');
+  confirmBtn.className = 'modal-btn confirm ' + entry.type;
+  confirmBtn.onclick = function() { closeConfirm(); doSubmit(entry); };
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+// ── Фактическая отправка ────────────────────────────────
+async function doSubmit(entry) {
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) submitBtn.disabled = true;
   overlay(true, t('sending'));
+  // Сохраняем в локальную историю
   S.history.unshift(entry);
   S.history = S.history.slice(0, 200);
   localStorage.setItem('historyLocal', JSON.stringify(S.history));
   try {
     await submitToForm(entry);
     toast(t('okSaved'));
-    document.getElementById('fQty').value = '';
-    document.getElementById('fComment').value = '';
-    document.getElementById('fSku').selectedIndex = 0;
-    setKe('КЕГУ');
+    clearFormFields();
   } catch(e) {
-    toast('✕ ' + e.message);
+    // Нет сети — кладём в очередь
+    S.queue.push(entry);
+    localStorage.setItem('sendQueue', JSON.stringify(S.queue));
+    updateQueueBadge();
+    toast(t('savedQueued'));
+    clearFormFields();
   } finally {
-    document.getElementById('submitBtn').disabled = false;
+    if (submitBtn) submitBtn.disabled = false;
     overlay(false);
   }
 }
 
+function clearFormFields() {
+  const fQty = document.getElementById('fQty');
+  const fComment = document.getElementById('fComment');
+  const fSku = document.getElementById('fSku');
+  const fScan = document.getElementById('fScan');
+  const scanResult = document.getElementById('scanResult');
+  if (fQty) fQty.value = '';
+  if (fComment) fComment.value = '';
+  if (fSku) fSku.selectedIndex = 0;
+  if (fScan) { fScan.value = ''; fScan.focus(); }
+  if (scanResult) scanResult.textContent = '';
+  setKe('КЕГУ');
+}
+
+// ── Очередь неотправленных ──────────────────────────────
+async function retryQueue() {
+  if (!S.queue.length) return;
+  overlay(true, t('sending'));
+  const stillFailed = [];
+  for (const entry of S.queue) {
+    try {
+      await submitToForm(entry);
+    } catch(e) {
+      stillFailed.push(entry);
+    }
+  }
+  S.queue = stillFailed;
+  localStorage.setItem('sendQueue', JSON.stringify(S.queue));
+  updateQueueBadge();
+  overlay(false);
+  if (S.queue.length === 0) {
+    toast(t('queueSent'));
+  } else {
+    toast(t('syncErr'));
+  }
+  if (S.tab === 'history') renderHistory();
+}
+
+function updateQueueBadge() {
+  const tabHistory = document.getElementById('tab-history');
+  if (!tabHistory) return;
+  let dot = tabHistory.querySelector('.tab-dot');
+  if (S.queue.length > 0) {
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.className = 'tab-dot';
+      tabHistory.appendChild(dot);
+    }
+  } else {
+    if (dot) dot.remove();
+  }
+}
+
+// Автоматически пробуем дослать очередь когда появилась сеть
+window.addEventListener('online', function() {
+  if (S.queue.length > 0) retryQueue();
+});
+
 function renderHistory() {
   const list = S.history;
+  let html = '<div class="section-title">' + t('historyTitle') + '</div>';
+  // Баннер очереди неотправленных
+  if (S.queue.length > 0) {
+    html += '<div class="queue-banner">' +
+      '<span class="qb-text">' + S.queue.length + ' ' + t('queueInfo') + '</span>' +
+      '<button class="qb-btn" onclick="retryQueue()">' + t('queueRetry') + '</button>' +
+      '</div>';
+  }
   if (!list.length) {
-    document.getElementById('content').innerHTML =
-      '<div class="section-title">' + t('historyTitle') + '</div>' +
-      '<div class="empty">' + t('noHistory') + '</div>';
+    html += '<div class="empty">' + t('noHistory') + '</div>';
+    document.getElementById('content').innerHTML = html;
     return;
   }
   const items = list.map(e => {
     const sign = e.type === 'income' ? '+' : '−';
     const icon = e.type === 'income' ? '↓' : '↑';
-    return '<div class="hist-item"><div class="hist-icon ' + e.type + '">' + icon + '</div><div class="hist-info"><div class="hist-sku">' + e.sku + '</div><div class="hist-meta">' + e.date + ' · ' + e.keType + (e.comment ? ' · ' + e.comment : '') + '</div></div><div class="hist-amount ' + e.type + '">' + sign + Number(e.qty).toLocaleString('ru') + '</div></div>';
+    const skuLabel = e.keType === 'КЕТУ' ? 'КЕТУ (общий)' : e.sku;
+    // Проверяем — есть ли эта запись ещё в очереди (не отправлена)
+    const pending = S.queue.some(q => q.ts === e.ts);
+    const pendingMark = pending ? '<span style="color:var(--orange); font-size:11px; font-weight:600"> • ' + t('queuePending') + '</span>' : '';
+    return '<div class="hist-item"><div class="hist-icon ' + e.type + '">' + icon + '</div>' +
+      '<div class="hist-info"><div class="hist-sku">' + skuLabel + pendingMark + '</div>' +
+      '<div class="hist-meta">' + e.date + ' · ' + e.keType + (e.comment ? ' · ' + e.comment : '') + '</div></div>' +
+      '<div class="hist-amount ' + e.type + '">' + sign + Number(e.qty).toLocaleString('ru') + '</div></div>';
   }).join('');
-  document.getElementById('content').innerHTML =
-    '<div class="section-title">' + t('historyTitle') + '</div>' +
-    '<div class="section-label">' + t('historyLocal') + '</div>' + items;
+  html += '<div class="section-label">' + t('historyLocal') + '</div>' + items;
+  document.getElementById('content').innerHTML = html;
 }
 
 function renderAccount() {
@@ -646,6 +976,11 @@ if (S.operator) {
   updateAvatar();
   switchTab('stock');
   loadStock();
+  updateQueueBadge();
+  // Если есть неотправленные записи и есть сеть — пробуем дослать
+  if (S.queue.length > 0 && navigator.onLine) {
+    setTimeout(retryQueue, 2000);
+  }
 } else {
   setTimeout(() => document.getElementById('opName').focus(), 200);
 }
