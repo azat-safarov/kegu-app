@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Расчёт потребности — КЕГУ/КЕТУ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #F2F2F7;
+  --bg-elevated: #FFFFFF;
+  --text: #1C1C1E;
+  --text-secondary: #3C3C43;
+  --text-tertiary: #8E8E93;
+  --separator: #D1D1D6;
+  --accent: #0A84FF;
+  --accent-dark: #0060DF;
+  --green: #34C759;
+  --orange: #FF9500;
+  --red: #FF3B30;
+  --purple: #5856D6;
+  --gray5: #E5E5EA;
+  --gray6: #F2F2F7;
+  --kegu: #0A84FF;
+  --ketu: #FF9500;
+  --radius: 14px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --bg-elevated: #1C1C1E;
+    --text: #FFFFFF;
+    --text-secondary: #EBEBF5;
+    --text-tertiary: #8E8E93;
+    --separator: #38383A;
+    --gray5: #2C2C2E;
+    --gray6: #1C1C1E;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+body { min-height: 100vh; }
+
+/* ===== HEADER ===== */
+.app-header {
+  background: var(--bg-elevated);
+  border-bottom: 0.5px solid var(--separator);
+  padding: 14px 20px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-logo {
+  width: 38px; height: 38px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.app-logo svg { width: 22px; height: 22px; color: #fff; }
+.app-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+.app-subtitle { font-size: 12px; color: var(--text-tertiary); }
+
+/* ===== TABS ===== */
+.tabbar {
+  display: flex;
+  background: var(--bg-elevated);
+  border-bottom: 0.5px solid var(--separator);
+  position: sticky;
+  top: 67px;
+  z-index: 99;
+  overflow-x: auto;
+}
+.tab {
+  flex: 1;
+  min-width: max-content;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===== CONTENT ===== */
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-bottom: 60px;
+}
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.section-desc {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* ===== UPLOAD ZONE ===== */
+.upload-zone {
+  border: 2px dashed var(--separator);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-elevated);
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(10,132,255,0.04);
+}
+.upload-icon {
+  width: 56px; height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+  background: rgba(10,132,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-icon svg { width: 28px; height: 28px; color: var(--accent); }
+.upload-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.upload-hint { font-size: 13px; color: var(--text-tertiary); }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-secondary { background: var(--gray5); color: var(--text); }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn svg { width: 18px; height: 18px; }
+
+/* ===== FORM CONTROLS ===== */
+.field { margin-bottom: 16px; }
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+.input, .select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus, .select:focus { border-color: var(--accent); }
+
+/* ===== TABLE ===== */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  background: var(--gray6);
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--separator);
+  white-space: nowrap;
+}
+td {
+  padding: 9px 12px;
+  border-bottom: 0.5px solid var(--separator);
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+.row-plant td {
+  background: linear-gradient(90deg, var(--purple), var(--accent));
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+}
+.row-line td {
+  background: var(--gray5);
+  font-weight: 700;
+  font-size: 12px;
+}
+.row-total td {
+  background: rgba(52,199,89,0.08);
+  font-weight: 700;
+}
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.kegu-val { color: var(--kegu); font-weight: 700; }
+.ketu-val { color: var(--ketu); font-weight: 700; }
+.neg { color: var(--red); }
+
+/* ===== BADGES & PILLS ===== */
+.badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-mapped { background: rgba(52,199,89,0.15); color: var(--green); }
+.badge-unmapped { background: rgba(255,59,48,0.15); color: var(--red); }
+.badge-ignore { background: var(--gray5); color: var(--text-tertiary); }
+
+/* ===== EMPTY STATE ===== */
+.empty {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-tertiary);
+}
+.empty-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 14px;
+  opacity: 0.3;
+}
+.empty-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary); }
+.empty-text { font-size: 14px; }
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(0,0,0,0.88);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+  max-width: 90%;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal {
+  background: var(--bg-elevated);
+  border-radius: 18px;
+  max-width: 440px;
+  width: 100%;
+  padding: 24px;
+  max-height: 85vh;
+  overflow-y: auto;
+  transform: scale(0.92);
+  transition: transform 0.2s;
+}
+.modal-overlay.show .modal { transform: scale(1); }
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+
+/* ===== STATS ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-box {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+.stat-label { font-size: 12px; color: var(--text-tertiary); font-weight: 600; }
+.stat-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-top: 2px; }
+
+/* ===== UTILITY ===== */
+.hidden { display: none !important; }
+.muted { color: var(--text-tertiary); }
+.center { text-align: center; }
+.mt8 { margin-top: 8px; }
+.mt16 { margin-top: 16px; }
+.flex { display: flex; gap: 10px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.spinner {
+  width: 22px; height: 22px;
+  border: 2.5px solid var(--gray5);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.lock-icon { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+
+/* ===== HOME ===== */
+.hero {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 18px;
+  padding: 32px 24px;
+  color: #fff;
+  margin-bottom: 20px;
+}
+.hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+.hero p { font-size: 14px; opacity: 0.9; line-height: 1.5; }
+.step-list { counter-reset: step; }
+.step-item {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.step-item:active { transform: scale(0.99); }
+.step-num {
+  counter-increment: step;
+  width: 32px; height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(10,132,255,0.12);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-num::before { content: counter(step); }
+.step-body { flex: 1; }
+.step-title { font-size: 15px; font-weight: 700; }
+.step-desc { font-size: 13px; color: var(--text-tertiary); margin-top: 2px; }
+.step-arrow { color: var(--text-tertiary); font-size: 20px; align-self: center; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  </div>
+  <div style="flex:1">
+    <div class="app-title">Расчёт потребности</div>
+    <div class="app-subtitle">КЕГУ / КЕТУ для производства</div>
+  </div>
+  <div id="userArea" style="display:flex;align-items:center;gap:8px">
+    <span id="userBadge" style="display:none;font-size:13px;font-weight:600;color:var(--text-secondary);background:var(--gray5);padding:6px 12px;border-radius:10px"></span>
+    <button id="logoutBtn" onclick="doLogout()" style="display:none;background:var(--gray5);border:none;color:var(--text-tertiary);border-radius:10px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Выйти</button>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button class="tab active" id="tab-home" onclick="switchTab('home')">Главная</button>
+  <button class="tab" id="tab-plan" onclick="switchTab('plan')">План</button>
+  <button class="tab" id="tab-report" onclick="switchTab('report')">Отчёт</button>
+  <button class="tab" id="tab-mapping" onclick="switchTab('mapping')">Маппинг</button>
+  <button class="tab" id="tab-master" onclick="switchTab('master')">Мастер-данные</button>
+  <button class="tab" id="tab-users" onclick="switchTab('users')">Пользователи</button>
+</div>
+
+<div class="content" id="content"></div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  РАСЧЁТ ПОТРЕБНОСТИ — приложение 2
+// ═══════════════════════════════════════════════════════════
+
+// Стартовые мастер-данные: 59 SKU с блок/палета
+// Поле line/plant заполняется пользователем в модуле Мастер-данных
+const DEFAULT_MASTER = [
+  {sku:"PEPSI - 2.25L PET 6х", block:6, pallet:64},
+  {sku:"PEPSI - 1,75L PET 6x", block:6, pallet:100},
+  {sku:"PEPSI 2L PET 6x", block:6, pallet:72},
+  {sku:"PEPSI 1.5L PET 6x", block:6, pallet:110},
+  {sku:"PEPSI 1L PET 12x", block:12, pallet:84},
+  {sku:"PEPSI 0,5L PET 24x", block:24, pallet:70},
+  {sku:"PEPSI 0.26L PET 24x", block:24, pallet:135},
+  {sku:"PEPSI 0.25L NRGB 12x", block:12, pallet:120},
+  {sku:"PEPSI 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"PEPSI 0.449L CAN 24x", block:24, pallet:72},
+  {sku:"PEPSI ZERO 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"PEPSI ZERO 0.25L NRGB 12x", block:12, pallet:120},
+  {sku:"PEPSI ZERO 0.5L PET 12x", block:12, pallet:154},
+  {sku:"PEPSI ZERO 1,5L PET 6x", block:6, pallet:110},
+  {sku:"MIRINDA 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"MIRINDA 0.25L NRGB 12x", block:12, pallet:120},
+  {sku:"MIRINDA ORANGE 0.5L PET 12x", block:12, pallet:154},
+  {sku:"MIRINDA ORANGE 1.5L PET 6x", block:6, pallet:110},
+  {sku:"MIRINDA ORANGE 1L PET 6x", block:6, pallet:168},
+  {sku:"7UP 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"7UP 0.25L NRGB 12x", block:12, pallet:120},
+  {sku:"7UP 0.5L PET 12x", block:12, pallet:154},
+  {sku:"7UP 1.5L PET 6x", block:6, pallet:110},
+  {sku:"7UP 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON зел Клубника 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON зел Клубника 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON зел Лимон 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON зел Лимон 1.5L PET 6x", block:6, pallet:110},
+  {sku:"LIPTON зел Лимон 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON чер Малина 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON зел Персик 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON чер Малина 1.5L PET 6x", block:6, pallet:110},
+  {sku:"LIPTON чер Малина 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON чер Персик 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON зел Персик 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON чер Персик 1L PET 6x", block:6, pallet:168},
+  {sku:"LIPTON черный HF Манго 0.5L PET 12x", block:12, pallet:154},
+  {sku:"LIPTON черный HF Манго 1L PET 6x", block:6, pallet:168},
+  {sku:"MOUNTAIN DEW 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"MOUNTAIN DEW 0.5L PET 12x", block:12, pallet:154},
+  {sku:"MOUNTAIN DEW 1L PET 6x", block:6, pallet:168},
+  {sku:"ADRENALINE RUSH 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"ADRENALINE RUSH 0.449L CAN 24x", block:24, pallet:72},
+  {sku:"ADRENALINE RUSH MANGO 0.449L CAN 24x", block:24, pallet:72},
+  {sku:"ROCKSTAR ORIGINAL 0.25L CAN 24x", block:24, pallet:192},
+  {sku:"ROCKSTAR ORIGINAL 0.449L CAN 24x", block:24, pallet:72},
+  {sku:"ROCKSTAR Гуава 0.449L CAN 12x", block:12, pallet:144},
+  {sku:"ROCKSTAR Персик 0.449L CAN 24x", block:24, pallet:72},
+  {sku:"STING - 0.3L PET 24x", block:24, pallet:120},
+  {sku:"STING - 0,449L PET 24x", block:24, pallet:72},
+  {sku:"7UP Moxito 0.449 CAN x12", block:12, pallet:144},
+  {sku:"7UP Moxito 500ml PET x12", block:12, pallet:154},
+  {sku:"7UP Moxito 1L PET x6", block:6, pallet:84},
+  {sku:"Lipton Green Mango 500ml PET x12", block:12, pallet:154},
+  {sku:"Lipton Green Mango 1L PET x6", block:6, pallet:168},
+  {sku:"Lipton Green Mango 1,5L PET x6", block:6, pallet:110},
+  {sku:"Pepsi Twist 0,449 CAN x12", block:12, pallet:144},
+  {sku:"Pepsi Twist 500ml PET x12", block:12, pallet:154},
+  {sku:"Pepsi Twist 1L PET x12", block:12, pallet:84}
+];
+
+// Пароль для модуля Мастер-данных (по умолчанию, fallback если нет пользователей)
+const MASTER_PASSWORD = "admin";
+
+// ═══ Подключение к Google-таблице (та же, что у приложения КЕГУ/КЕТУ) ═══
+const SHEET_ID = '1vXROysWUgPBeLckQgeZJ2CWMnL4_onhKgkbYDuqbp40';
+function csvUrl(sheetName) {
+  return 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+    '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheetName);
+}
+const SHEET_SKU     = 'SKU';
+const SHEET_PLANTS  = 'Заводы';
+const SHEET_MAPPING = 'Маппинг';
+const SHEET_USERS   = 'Пользователи';
+const SHEET_STOCK   = 'Отчет остатока кегу-кету';
+
+// URL Apps Script для записи в таблицу.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzI4nJIcgWEDWzoKqPbxmssQkBay5gUWzuS9b6xRIhIX3Mxp42Yk7Pg6TTGADnNKXX6/exec';
+
+// Записать данные в лист таблицы через Apps Script
+// sheetKey: 'sku' | 'plants' | 'mapping' | 'users'
+// rows: массив массивов (строки без заголовка)
+async function writeToSheet(sheetKey, rows) {
+  if (!SCRIPT_URL) {
+    toast('Запись в таблицу не настроена — сохранено локально');
+    return false;
+  }
+  try {
+    const body = new URLSearchParams();
+    body.set('action', 'replace');
+    body.set('sheet', sheetKey);
+    body.set('data', JSON.stringify(rows));
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body });
+    // в режиме no-cors ответ не читается — считаем что ок
+    return true;
+  } catch(e) {
+    console.error('writeToSheet error', e);
+    toast('Ошибка записи в таблицу');
+    return false;
+  }
+}
+
+// все вкладки для прав доступа
+const ALL_TABS = [
+  { id:'home',    name:'Главная' },
+  { id:'plan',    name:'План' },
+  { id:'report',  name:'Отчёт' },
+  { id:'mapping', name:'Маппинг' },
+  { id:'master',  name:'Мастер-данные' },
+  { id:'users',   name:'Пользователи' }
+];
+
+// ─── Состояние ───
+const ST = {
+  tab: 'home',
+  planData: null,      // {dates:[], lines:[{name, products:[{name, qty:[]}]}]}
+  master: [],          // мастер-данные SKU: {sku, block, pallet}
+  mapping: {},         // {планНазвание: [{sku, share}], ...}  доля для 1→2
+  plants: [],          // [{name, lines:[строки]}]  заводы и их линии
+  saihunSplit: {},     // {ключ_позиции: линия}  разбивка Сайхуна по линиям
+  users: [],           // [{login, password, name, access:[tabIds]}]
+  stock: {},           // {sku: {kegu, ketu}}  остатки из приложения 1
+  currentUser: null,   // вошедший пользователь
+  cloudLoaded: false,  // загружены ли данные из таблицы
+  masterUnlocked: false
+};
+
+// ─── localStorage helpers ───
+function loadLocal() {
+  try {
+    const m = localStorage.getItem('calc_master');
+    ST.master = m ? JSON.parse(m) : JSON.parse(JSON.stringify(DEFAULT_MASTER));
+    const mp = localStorage.getItem('calc_mapping');
+    ST.mapping = mp ? JSON.parse(mp) : {};
+    const pl = localStorage.getItem('calc_plants');
+    ST.plants = pl ? JSON.parse(pl) : [];
+    const ss = localStorage.getItem('calc_saihun');
+    ST.saihunSplit = ss ? JSON.parse(ss) : {};
+    // подчистка мастер-данных от старых полей line/plant
+    ST.master.forEach(m => { delete m.line; delete m.plant; });
+  } catch(e) {
+    ST.master = JSON.parse(JSON.stringify(DEFAULT_MASTER));
+    ST.mapping = {}; ST.plants = []; ST.saihunSplit = {};
+  }
+}
+function saveMaster() { localStorage.setItem('calc_master', JSON.stringify(ST.master)); }
+function saveMapping() { localStorage.setItem('calc_mapping', JSON.stringify(ST.mapping)); }
+function savePlants() { localStorage.setItem('calc_plants', JSON.stringify(ST.plants)); }
+function saveSaihun() { localStorage.setItem('calc_saihun', JSON.stringify(ST.saihunSplit)); }
+
+// ═══════════════════════════════════════════════════════════
+//  ЗАГРУЗКА ДАННЫХ ИЗ GOOGLE-ТАБЛИЦЫ
+// ═══════════════════════════════════════════════════════════
+// Парсер CSV (учитывает кавычки и запятые внутри значений)
+function parseCSV(text) {
+  const rows = [];
+  let row = [], val = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { val += '"'; i++; }
+        else inQuotes = false;
+      } else val += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(val); val = ''; }
+      else if (ch === '\n') { row.push(val); rows.push(row); row = []; val = ''; }
+      else if (ch === '\r') { /* skip */ }
+      else val += ch;
+    }
+  }
+  if (val !== '' || row.length) { row.push(val); rows.push(row); }
+  return rows;
+}
+
+function num(v) {
+  if (v == null) return 0;
+  const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+
+// Загрузка одного листа
+async function fetchSheet(sheetName) {
+  const resp = await fetch(csvUrl(sheetName));
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const text = await resp.text();
+  return parseCSV(text);
+}
+
+// Загрузить все мастер-данные из таблицы
+async function loadFromCloud() {
+  const results = { ok:[], fail:[] };
+
+  // SKU
+  try {
+    const rows = await fetchSheet(SHEET_SKU);
+    const arr = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0] || !r[0].trim()) continue;
+      // Колонка D = Тип (ГП / Материал). По умолчанию ГП.
+      let type = (r[3]||'').trim().toLowerCase();
+      if (type !== 'материал') type = 'гп';
+      arr.push({ sku: r[0].trim(), block: num(r[1]), pallet: num(r[2]), type });
+    }
+    if (arr.length) { ST.master = arr; saveMaster(); }
+    results.ok.push('SKU (' + arr.length + ')');
+  } catch(e) { results.fail.push('SKU'); }
+
+  // Заводы
+  try {
+    const rows = await fetchSheet(SHEET_PLANTS);
+    const byPlant = {};
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const plant = (r[0]||'').trim();
+      const line = (r[1]||'').trim();
+      if (!plant) continue;
+      if (!byPlant[plant]) byPlant[plant] = { name: plant, lines: [] };
+      if (line) byPlant[plant].lines.push(line);
+    }
+    const arr = Object.values(byPlant);
+    if (arr.length) { ST.plants = arr; savePlants(); }
+    results.ok.push('Заводы (' + arr.length + ')');
+  } catch(e) { results.fail.push('Заводы'); }
+
+  // Маппинг
+  try {
+    const rows = await fetchSheet(SHEET_MAPPING);
+    const map = {};
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const planName = (r[0]||'').trim();
+      const sku = (r[1]||'').trim();
+      if (!planName) continue;
+      if (sku.toLowerCase() === 'ignore' || sku === '—') { map[planName] = 'ignore'; continue; }
+      if (!sku) continue;
+      const share = r[2] ? (num(r[2]) > 1 ? num(r[2])/100 : num(r[2])) : 1;
+      if (!map[planName] || map[planName] === 'ignore') map[planName] = [];
+      map[planName].push({ sku, share: share || 1 });
+    }
+    ST.mapping = map; saveMapping();
+    results.ok.push('Маппинг');
+  } catch(e) { results.fail.push('Маппинг'); }
+
+  // Пользователи
+  try {
+    const rows = await fetchSheet(SHEET_USERS);
+    const arr = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0] || !r[0].trim()) continue;
+      const login = r[0].trim();
+      const password = (r[1]||'').trim();
+      let name = (r[2]||'').trim();
+      let accessRaw = (r[3]||'').trim();
+      // парсим доступ: "plan:edit, report:view, mapping:view" → {plan:'edit', ...}
+      const access = {};
+      if (accessRaw) {
+        accessRaw.split(',').forEach(part => {
+          const [tab, lvl] = part.split(':').map(s => (s||'').trim().toLowerCase());
+          if (tab) access[tab] = (lvl === 'edit') ? 'edit' : 'view';
+        });
+      }
+      // совместимость: если в "Доступ" стоит просто admin/user
+      if (!Object.keys(access).length) {
+        const role = accessRaw.toLowerCase() || name.toLowerCase();
+        if (role === 'admin') {
+          ALL_TABS.forEach(t => access[t.id] = 'edit');
+        } else if (role === 'user') {
+          access.home='view'; access.plan='view'; access.report='view';
+        }
+        if (role==='admin'||role==='user') name = name || login;
+      }
+      arr.push({ login, password, name: name||login, access });
+    }
+    ST.users = arr;
+    results.ok.push('Пользователи (' + arr.length + ')');
+  } catch(e) { results.fail.push('Пользователи'); }
+
+  // Остатки КЕГУ/КЕТУ
+  try {
+    const rows = await fetchSheet(SHEET_STOCK);
+    const stock = {};
+    let globalKetu = 0;
+    // H1 (строка 0, колонка 6) — глобальный КЕТУ
+    if (rows[0] && rows[0][6]) globalKetu = num(rows[0][6]);
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[0]||'').trim();
+      if (!name) continue;
+      // C = КЕГУ остаток (индекс 2), E = КЕТУ (индекс 4)
+      stock[name] = { kegu: num(r[2]), ketu: num(r[4]) || globalKetu };
+    }
+    ST.stock = stock;
+    results.ok.push('Остатки');
+  } catch(e) { results.fail.push('Остатки'); }
+
+  ST.cloudLoaded = true;
+  return results;
+}
+
+
+// Найти завод по названию линии
+function plantForLine(lineName) {
+  const ln = (lineName||'').trim().toLowerCase();
+  for (const p of ST.plants) {
+    if (p.lines.some(l => (l||'').trim().toLowerCase() === ln)) return p.name;
+  }
+  return null;
+}
+
+// Все линии что встречались: из загруженного плана + из настроенных заводов
+function knownLines() {
+  const set = new Set();
+  if (ST.planData) ST.planData.lines.forEach(l => { if (l.name) set.add(l.name); });
+  ST.plants.forEach(p => p.lines.forEach(l => { if (l) set.add(l); }));
+  // сохранённые в истории линии
+  try {
+    const saved = JSON.parse(localStorage.getItem('calc_knownlines') || '[]');
+    saved.forEach(l => set.add(l));
+  } catch(e) {}
+  return [...set].sort();
+}
+function rememberLines() {
+  if (!ST.planData) return;
+  const set = new Set();
+  try { JSON.parse(localStorage.getItem('calc_knownlines')||'[]').forEach(l=>set.add(l)); } catch(e){}
+  ST.planData.lines.forEach(l => { if (l.name) set.add(l.name); });
+  localStorage.setItem('calc_knownlines', JSON.stringify([...set]));
+}
+
+// ─── Toast ───
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ─── Modal ───
+function openModal(html) {
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+// ─── Формат чисел ───
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('ru-RU');
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt)) return String(d);
+  return String(dt.getDate()).padStart(2,'0') + '.' +
+         String(dt.getMonth()+1).padStart(2,'0') + '.' + dt.getFullYear();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ВКЛАДКИ
+// ═══════════════════════════════════════════════════════════
+function switchTab(tab) {
+  // проверка доступа
+  if (!userCanAccess(tab)) { toast('Нет доступа к этому разделу'); return; }
+  ST.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const btn = document.getElementById('tab-' + tab);
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+// Уровень доступа пользователя к вкладке: 'none' | 'view' | 'edit'
+function userAccessLevel(tab) {
+  // если пользователей нет — полный доступ (первичная настройка)
+  if (!ST.users.length) return 'edit';
+  if (!ST.currentUser) return 'none';
+  const acc = ST.currentUser.access || {};
+  return acc[tab] || 'none';
+}
+// Может ли видеть вкладку
+function userCanAccess(tab) {
+  return userAccessLevel(tab) !== 'none';
+}
+// Может ли изменять на вкладке
+function userCanEdit(tab) {
+  return userAccessLevel(tab) === 'edit';
+}
+
+// Обновить видимость вкладок по правам
+function refreshTabbar() {
+  ALL_TABS.forEach(t => {
+    const btn = document.getElementById('tab-' + t.id);
+    if (btn) btn.style.display = userCanAccess(t.id) ? '' : 'none';
+  });
+}
+
+function render() {
+  const c = document.getElementById('content');
+  // экран входа: если есть пользователи и никто не вошёл
+  if (ST.users.length && !ST.currentUser) {
+    renderLogin(c);
+    return;
+  }
+  refreshTabbar();
+  // если текущая вкладка недоступна — переключить на первую доступную
+  if (!userCanAccess(ST.tab)) {
+    const firstOk = ALL_TABS.find(t => userCanAccess(t.id));
+    if (firstOk) {
+      ST.tab = firstOk.id;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      const btn = document.getElementById('tab-' + ST.tab);
+      if (btn) btn.classList.add('active');
+    }
+  }
+  if (ST.tab === 'home') renderHomeTab(c);
+  else if (ST.tab === 'plan') renderPlanTab(c);
+  else if (ST.tab === 'report') renderReportTab(c);
+  else if (ST.tab === 'mapping') renderMappingTab(c);
+  else if (ST.tab === 'master') renderMasterTab(c);
+  else if (ST.tab === 'users') renderUsersTab(c);
+}
+
+// ─── Экран входа ───
+function renderLogin(c) {
+  c.innerHTML =
+    '<div style="max-width:360px;margin:40px auto">' +
+      '<div class="hero" style="text-align:center">' +
+        '<h1>Вход в систему</h1>' +
+        '<p>Введите логин и пароль</p>' +
+      '</div>' +
+      '<div class="card">' +
+        '<div class="field"><label class="field-label">Логин</label>' +
+          '<input class="input" id="loginInput" autocomplete="username"></div>' +
+        '<div class="field"><label class="field-label">Пароль</label>' +
+          '<input class="input" type="password" id="passInput" autocomplete="current-password" ' +
+          'onkeydown="if(event.key===\'Enter\')doLogin()"></div>' +
+        '<button class="btn btn-primary btn-block" onclick="doLogin()">Войти</button>' +
+      '</div>' +
+    '</div>';
+  document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+  setTimeout(()=>{ const e=document.getElementById('loginInput'); if(e) e.focus(); }, 100);
+}
+
+function doLogin() {
+  const login = document.getElementById('loginInput').value.trim();
+  const pass = document.getElementById('passInput').value;
+  const u = ST.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.password === pass);
+  if (!u) { toast('Неверный логин или пароль'); return; }
+  ST.currentUser = u;
+  // первая доступная вкладка
+  const firstOk = ALL_TABS.find(t => (u.access[t.id] && u.access[t.id] !== 'none'));
+  ST.tab = firstOk ? firstOk.id : 'home';
+  toast('Добро пожаловать, ' + u.name);
+  render();
+  updateUserBadge();
+}
+
+function doLogout() {
+  ST.currentUser = null;
+  ST.tab = 'home';
+  render();
+  updateUserBadge();
+}
+
+function updateUserBadge() {
+  const badge = document.getElementById('userBadge');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!badge) return;
+  if (ST.currentUser) {
+    badge.textContent = ST.currentUser.name;
+    badge.style.display = '';
+    if (logoutBtn) logoutBtn.style.display = '';
+  } else {
+    badge.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ВКЛАДКА «ГЛАВНАЯ»
+// ═══════════════════════════════════════════════════════════
+function renderHomeTab(c) {
+  const planLoaded = !!ST.planData;
+  let html =
+    '<div class="hero">' +
+      '<h1>Расчёт потребности</h1>' +
+      '<p>Загрузите план производства — инструмент рассчитает, сколько стикеров КЕГУ и КЕТУ нужно передать на производство, с разбивкой по заводам и линиям.</p>' +
+    '</div>';
+
+  html += '<div class="card-title" style="margin-bottom:10px">Как работать</div>';
+  html += '<div class="step-list">' +
+    '<div class="step-item" onclick="switchTab(\'plan\')">' +
+      '<div class="step-num"></div>' +
+      '<div class="step-body">' +
+        '<div class="step-title">Загрузить план</div>' +
+        '<div class="step-desc">Закиньте файл «План производства расчёт» — читается лист «План»</div>' +
+      '</div><div class="step-arrow">›</div>' +
+    '</div>' +
+    '<div class="step-item" onclick="switchTab(\'mapping\')">' +
+      '<div class="step-num"></div>' +
+      '<div class="step-body">' +
+        '<div class="step-title">Сопоставить продукты</div>' +
+        '<div class="step-desc">Свяжите названия из плана с SKU. Настраивается один раз и запоминается</div>' +
+      '</div><div class="step-arrow">›</div>' +
+    '</div>' +
+    '<div class="step-item" onclick="switchTab(\'report\')">' +
+      '<div class="step-num"></div>' +
+      '<div class="step-body">' +
+        '<div class="step-title">Получить отчёт</div>' +
+        '<div class="step-desc">Расчёт КЕГУ/КЕТУ по заводам и линиям, экспорт в Excel</div>' +
+      '</div><div class="step-arrow">›</div>' +
+    '</div>' +
+  '</div>';
+
+  // статус
+  html += '<div class="card mt16">' +
+    '<div class="card-title">Текущее состояние</div>' +
+    '<div class="flex-between" style="padding:6px 0;border-bottom:0.5px solid var(--separator)">' +
+      '<span style="font-size:14px">План загружен</span>' +
+      '<span class="badge ' + (planLoaded?'badge-mapped':'badge-ignore') + '">' + (planLoaded?'да':'нет') + '</span>' +
+    '</div>' +
+    '<div class="flex-between" style="padding:6px 0">' +
+      '<span style="font-size:14px">SKU в мастер-данных</span>' +
+      '<span class="badge badge-mapped">' + ST.master.length + '</span>' +
+    '</div>' +
+  '</div>';
+
+  html += '<button class="btn btn-primary btn-block mt8" onclick="switchTab(\'plan\')">Начать — загрузить план</button>';
+
+  html += '<div class="muted center mt16" style="font-size:12px">Связь с приложением КЕГУ/КЕТУ — только чтение остатков. Данные приложения не изменяются.</div>';
+
+  c.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ВКЛАДКА «ПЛАН» — загрузка файла
+// ═══════════════════════════════════════════════════════════
+function renderPlanTab(c) {
+  let html =
+    '<div class="section-title">Загрузка плана производства</div>' +
+    '<div class="section-desc">Загрузите файл «План производства расчёт». Инструмент прочитает лист «План».</div>';
+
+  if (!ST.planData) {
+    html +=
+      '<div class="upload-zone" id="uploadZone" onclick="document.getElementById(\'fileInput\').click()">' +
+        '<div class="upload-icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+        '</div>' +
+        '<div class="upload-title">Нажмите чтобы выбрать файл</div>' +
+        '<div class="upload-hint">или перетащите .xlsx сюда</div>' +
+      '</div>' +
+      '<input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" class="hidden">';
+  } else {
+    const p = ST.planData;
+    html +=
+      '<div class="card">' +
+        '<div class="flex-between">' +
+          '<div>' +
+            '<div class="card-title">Файл загружен ✓</div>' +
+            '<div class="muted" style="font-size:13px">Период: ' + fmtDate(p.dates[0]) + ' — ' + fmtDate(p.dates[p.dates.length-1]) + ' · ' + p.dates.length + ' дн.</div>' +
+          '</div>' +
+          '<button class="btn btn-secondary" onclick="resetPlan()">Заменить</button>' +
+        '</div>' +
+      '</div>';
+
+    // Сводка
+    let totalProd = 0, mappedProd = 0, ignoredProd = 0;
+    p.lines.forEach(ln => ln.products.forEach(pr => {
+      const total = pr.qty.reduce((a,b) => a+(b||0), 0);
+      if (total > 0) {
+        totalProd++;
+        const m = ST.mapping[pr.name];
+        if (m === 'ignore') ignoredProd++;
+        else if (m && m.length) mappedProd++;
+      }
+    }));
+    const unmapped = totalProd - mappedProd - ignoredProd;
+
+    html +=
+      '<div class="stat-grid">' +
+        '<div class="stat-box"><div class="stat-label">Позиций в плане</div><div class="stat-value">' + totalProd + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Сопоставлено</div><div class="stat-value" style="color:var(--green)">' + mappedProd + '</div></div>' +
+        '<div class="stat-box"><div class="stat-label">Не сопоставлено</div><div class="stat-value" style="color:var(--red)">' + unmapped + '</div></div>' +
+      '</div>';
+
+    if (unmapped > 0) {
+      html += '<div class="card" style="background:rgba(255,149,0,0.08)">' +
+        '<div style="font-size:14px"><b>' + unmapped + '</b> ' + plural(unmapped,'позиция','позиции','позиций') +
+        ' плана ещё не сопоставлены с SKU. Перейдите на вкладку «Маппинг».</div>' +
+        '<button class="btn btn-primary mt8" onclick="switchTab(\'mapping\')">Перейти к маппингу</button>' +
+        '</div>';
+    } else {
+      html += '<div class="card" style="background:rgba(52,199,89,0.08)">' +
+        '<div style="font-size:14px">Все позиции сопоставлены. Отчёт готов к формированию.</div>' +
+        '<button class="btn btn-green mt8" onclick="switchTab(\'report\')">Открыть отчёт</button>' +
+        '</div>';
+    }
+
+    // Превью плана
+    html += '<div class="card-title mt16" style="margin-bottom:8px">Содержимое плана</div>';
+    html += renderPlanPreview(p);
+  }
+
+  c.innerHTML = html;
+
+  if (!ST.planData) {
+    const fi = document.getElementById('fileInput');
+    const uz = document.getElementById('uploadZone');
+    fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+    uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+    uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+    uz.addEventListener('drop', e => {
+      e.preventDefault(); uz.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  }
+}
+
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+function renderPlanPreview(p) {
+  let rows = '';
+  p.lines.forEach(ln => {
+    const lineHasData = ln.products.some(pr => pr.qty.reduce((a,b)=>a+(b||0),0) > 0);
+    if (!lineHasData) return;
+    rows += '<tr class="row-line"><td colspan="' + (p.dates.length+2) + '">' + esc(ln.name) + '</td></tr>';
+    ln.products.forEach(pr => {
+      const total = pr.qty.reduce((a,b)=>a+(b||0),0);
+      if (total <= 0) return;
+      const m = ST.mapping[pr.name];
+      let badge;
+      if (m === 'ignore') badge = '<span class="badge badge-ignore">не учитывать</span>';
+      else if (m && m.length) badge = '<span class="badge badge-mapped">✓ ' + m.length + ' SKU</span>';
+      else badge = '<span class="badge badge-unmapped">нет SKU</span>';
+      let cells = '';
+      pr.qty.forEach(q => cells += '<td class="num">' + (q ? fmt(q) : '·') + '</td>');
+      rows += '<tr><td>' + esc(pr.name) + ' ' + badge + '</td>' + cells +
+              '<td class="num"><b>' + fmt(total) + '</b></td></tr>';
+    });
+  });
+  let head = '<th>Продукт</th>';
+  p.dates.forEach(d => head += '<th class="num">' + fmtDate(d) + '</th>');
+  head += '<th class="num">Всего</th>';
+  return '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function resetPlan() {
+  ST.planData = null;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ПАРСЕР ФАЙЛА «ПЛАН»
+// ═══════════════════════════════════════════════════════════
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      const planData = parsePlanSheet(wb);
+      if (!planData) {
+        toast('Не найден лист «План» в файле');
+        return;
+      }
+      if (!planData.lines.length) {
+        toast('Лист «План» пуст или структура не распознана');
+        return;
+      }
+      ST.planData = planData;
+      rememberLines();
+      toast('План загружен: ' + planData.dates.length + ' дней');
+      render();
+    } catch(err) {
+      console.error(err);
+      toast('Ошибка чтения файла: ' + err.message);
+    }
+  };
+  reader.onerror = () => toast('Не удалось прочитать файл');
+  reader.readAsArrayBuffer(file);
+}
+
+function parsePlanSheet(wb) {
+  // Ищем лист "План" (может называться "План 11-14.05" и т.п.)
+  let sheetName = wb.SheetNames.find(n => n.trim().toLowerCase().startsWith('план'));
+  if (!sheetName) return null;
+  const ws = wb.Sheets[sheetName];
+  const grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null });
+
+  // Строка 6 (индекс 5) — шапка: A=Линия, B=Продукт, C..= даты
+  // Ищем строку шапки: где в колонке A или B есть "Линия"/"Продукт"
+  let headerRow = -1;
+  for (let r = 0; r < Math.min(grid.length, 15); r++) {
+    const row = grid[r] || [];
+    const a = (row[0]||'').toString().trim().toLowerCase();
+    const b = (row[1]||'').toString().trim().toLowerCase();
+    if ((a === 'линия' || b === 'продукт')) { headerRow = r; break; }
+  }
+  if (headerRow < 0) headerRow = 5; // fallback на строку 6
+
+  // Даты из шапки — колонки C(2) и далее, пока есть дата
+  const header = grid[headerRow] || [];
+  const dateCols = [];
+  const dates = [];
+  for (let col = 2; col < header.length; col++) {
+    const v = header[col];
+    if (v instanceof Date) { dateCols.push(col); dates.push(v); }
+    else if (v && !isNaN(Date.parse(v)) && /\d/.test(String(v))) {
+      const d = new Date(v);
+      if (!isNaN(d)) { dateCols.push(col); dates.push(d); }
+    }
+  }
+  if (!dateCols.length) return null;
+
+  // Разбор строк после шапки
+  const lines = [];
+  let curLine = null;
+  for (let r = headerRow + 1; r < grid.length; r++) {
+    const row = grid[r] || [];
+    const a = row[0];   // линия
+    const b = row[1];   // продукт
+    const aStr = (a||'').toString().trim();
+    const bStr = (b||'').toString().trim();
+
+    if (aStr && !bStr) {
+      // строка-разделитель линии
+      curLine = { name: aStr, products: [] };
+      lines.push(curLine);
+    } else if (bStr && bStr.toLowerCase() !== 'итого') {
+      // строка продукта
+      if (!curLine) { curLine = { name: '(без линии)', products: [] }; lines.push(curLine); }
+      const qty = dateCols.map(col => {
+        const v = row[col];
+        return (typeof v === 'number') ? v : (v ? parseFloat(String(v).replace(/\s/g,'').replace(',','.')) || 0 : 0);
+      });
+      curLine.products.push({ name: bStr, qty });
+    }
+    // строки "Итого" и пустые — пропускаем
+  }
+
+  return { sheetName, dates, lines };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ВКЛАДКА «МАППИНГ»
+// ═══════════════════════════════════════════════════════════
+function renderMappingTab(c) {
+  let html =
+    '<div class="section-title">Сопоставление продуктов</div>' +
+    '<div class="section-desc">Свяжите названия из плана с вашими SKU. Поддерживается 1→1, 2→1 и 1→2.</div>';
+
+  if (!ST.planData) {
+    c.innerHTML = html + emptyState('Сначала загрузите план', 'Перейдите на вкладку «План»');
+    return;
+  }
+
+  // Собираем уникальные продукты из плана с ненулевым количеством
+  const planProducts = [];
+  const seen = new Set();
+  ST.planData.lines.forEach(ln => ln.products.forEach(pr => {
+    const total = pr.qty.reduce((a,b)=>a+(b||0),0);
+    if (total > 0 && !seen.has(pr.name)) {
+      seen.add(pr.name);
+      planProducts.push({ name: pr.name, line: ln.name, total });
+    }
+  }));
+
+  if (!planProducts.length) {
+    c.innerHTML = html + emptyState('Нет данных', 'В плане нет позиций с количеством');
+    return;
+  }
+
+  html += '<div class="table-wrap"><table><thead><tr>' +
+    '<th>Продукт из плана</th><th>Линия</th><th>Сопоставление</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  planProducts.forEach((pp, i) => {
+    const m = ST.mapping[pp.name];
+    let status;
+    if (m === 'ignore') {
+      status = '<span class="badge badge-ignore">не учитывать</span>';
+    } else if (m && m.length) {
+      status = m.map(x => {
+        const shareTxt = x.share && x.share !== 1 ? ' (' + Math.round(x.share*100) + '%)' : '';
+        return '<div style="font-size:12px">→ ' + esc(x.sku) + shareTxt + '</div>';
+      }).join('');
+    } else {
+      status = '<span class="badge badge-unmapped">не задано</span>';
+    }
+    html += '<tr>' +
+      '<td><b>' + esc(pp.name) + '</b></td>' +
+      '<td class="muted" style="font-size:12px">' + esc(pp.line) + '</td>' +
+      '<td>' + status + '</td>' +
+      '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="editMapping(' + i + ')">Изменить</button></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // сохраняем для доступа из модалки
+  ST._mappingProducts = planProducts;
+  c.innerHTML = html;
+}
+
+function editMapping(idx) {
+  const pp = ST._mappingProducts[idx];
+  const cur = ST.mapping[pp.name];
+  const curList = (cur && cur !== 'ignore') ? cur : [];
+
+  let skuOptions = '<option value="">— выберите SKU —</option>';
+  ST.master.forEach(m => {
+    skuOptions += '<option value="' + esc(m.sku) + '">' + esc(m.sku) + '</option>';
+  });
+
+  let html =
+    '<div class="modal-title">Сопоставление</div>' +
+    '<div style="font-size:14px;margin-bottom:4px"><b>' + esc(pp.name) + '</b></div>' +
+    '<div class="muted" style="font-size:12px;margin-bottom:16px">Линия: ' + esc(pp.line) + '</div>' +
+    '<div id="mapRows">';
+
+  // Текущие строки сопоставления (минимум одна)
+  const rows = curList.length ? curList : [{sku:'', share:1}];
+  rows.forEach((r,i) => {
+    html += mapRowHtml(i, skuOptions, r.sku, r.share);
+  });
+  html += '</div>';
+
+  html +=
+    '<button class="btn btn-secondary mt8" style="font-size:13px;padding:8px 14px" onclick="addMapRow()">+ Добавить SKU (для 1→2)</button>' +
+    '<div class="flex mt16">' +
+      '<button class="btn btn-primary btn-block" onclick="saveMappingFor(' + idx + ')">Сохранить</button>' +
+    '</div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-secondary btn-block" onclick="setIgnore(' + idx + ')">Не учитывать (промо/Казахстан)</button>' +
+    '</div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-secondary btn-block" onclick="closeModal()">Отмена</button>' +
+    '</div>';
+
+  openModal(html);
+  // сохраним options для addMapRow
+  ST._skuOptions = skuOptions;
+}
+
+function mapRowHtml(i, options, selSku, share) {
+  const opts = options.replace('value="' + cssEsc(selSku) + '"', 'value="' + cssEsc(selSku) + '" selected');
+  return '<div class="map-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">' +
+    '<select class="select map-sku" style="flex:1">' + opts + '</select>' +
+    '<input class="input map-share" type="number" min="1" max="100" value="' + Math.round((share||1)*100) + '" style="width:70px" title="доля %">' +
+    '<span class="muted" style="font-size:12px">%</span>' +
+    '</div>';
+}
+function cssEsc(s){ return String(s||'').replace(/"/g,'&quot;'); }
+
+function addMapRow() {
+  const div = document.createElement('div');
+  div.innerHTML = mapRowHtml(99, ST._skuOptions, '', 1);
+  document.getElementById('mapRows').appendChild(div.firstChild);
+}
+
+async function saveMappingFor(idx) {
+  const pp = ST._mappingProducts[idx];
+  const rows = document.querySelectorAll('#mapRows .map-row');
+  const list = [];
+  rows.forEach(r => {
+    const sku = r.querySelector('.map-sku').value;
+    const share = parseFloat(r.querySelector('.map-share').value) / 100 || 1;
+    if (sku) list.push({ sku, share });
+  });
+  if (!list.length) { toast('Выберите хотя бы один SKU'); return; }
+  ST.mapping[pp.name] = list;
+  saveMapping();
+  closeModal();
+  await syncMappingToSheet();
+  toast('Сопоставление сохранено');
+  render();
+}
+
+async function setIgnore(idx) {
+  const pp = ST._mappingProducts[idx];
+  ST.mapping[pp.name] = 'ignore';
+  saveMapping();
+  closeModal();
+  await syncMappingToSheet();
+  toast('Позиция помечена «не учитывать»');
+  render();
+}
+
+function emptyState(title, text) {
+  return '<div class="empty">' +
+    '<svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>' +
+    '<div class="empty-title">' + title + '</div>' +
+    '<div class="empty-text">' + text + '</div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  РАСЧЁТ ПОТРЕБНОСТИ
+// ═══════════════════════════════════════════════════════════
+// Для каждого продукта плана → по маппингу раскидываем на SKU
+// КЕГУ = штуки / блок ;  КЕТУ = штуки / палета (палета в блоках → штуки/блок/палета)
+function buildReport() {
+  const p = ST.planData;
+  if (!p) return null;
+  const masterBySku = {};
+  ST.master.forEach(m => masterBySku[m.sku] = m);
+
+  // plant -> line -> [rows]  (одна строка = один SKU на одну дату)
+  const plants = {};
+  let warnings = [];
+
+  p.lines.forEach(ln => {
+    ln.products.forEach(pr => {
+      const total = pr.qty.reduce((a,b)=>a+(b||0),0);
+      if (total <= 0) return;
+      const map = ST.mapping[pr.name];
+      if (map === 'ignore' || !map || !map.length) return;
+
+      // ЛИНИЯ — из плана. ЗАВОД — по справочнику линий.
+      const planLine = ln.name;
+      const plantName = plantForLine(planLine) || 'Завод не указан';
+      // завод-объект (для проверки многолинейности — случай Сайхуна)
+      const plantObj = ST.plants.find(p => p.name === plantName);
+      const multiLine = plantObj && plantObj.lines.length > 1;
+
+      map.forEach(mp => {
+        const m = masterBySku[mp.sku];
+        if (!m) { warnings.push('Нет в мастер-данных: ' + mp.sku); return; }
+        const share = mp.share || 1;
+
+        if (!plants[plantName]) plants[plantName] = {};
+
+        // отдельная строка на каждую дату с ненулевым количеством
+        pr.qty.forEach((q, i) => {
+          const pcs = (q||0) * share;
+          if (pcs <= 0) return;
+          // Материалы (БИБ и т.п.) — показываются, но КЕГУ/КЕТУ не считаются
+          const isMaterial = (m.type === 'материал');
+          const kegu = (isMaterial || !m.block) ? 0 : pcs / m.block;
+          const ketu = (isMaterial || !m.block || !m.pallet) ? 0 : pcs / m.block / m.pallet;
+
+          // ключ позиции (для переназначения линии у многолинейного завода)
+          const rowKey = plantName + '|' + planLine + '|' + mp.sku + '|' + i + '|' + pr.name;
+          let lineName = planLine;
+          if (multiLine) {
+            // если есть ручное назначение — используем его, иначе первая линия завода
+            lineName = ST.saihunSplit[rowKey] || plantObj.lines[0];
+            // защита: назначенная линия должна принадлежать заводу
+            if (!plantObj.lines.includes(lineName)) lineName = plantObj.lines[0];
+          }
+
+          if (!plants[plantName][lineName]) plants[plantName][lineName] = [];
+          plants[plantName][lineName].push({
+            sku: mp.sku,
+            fromPlan: pr.name,
+            block: m.block, pallet: m.pallet,
+            date: p.dates[i],
+            pcs, kegu, ketu,
+            isMaterial,
+            rowKey,
+            multiLine,
+            plantLines: multiLine ? plantObj.lines.slice() : null,
+            curLine: lineName
+          });
+        });
+      });
+    });
+  });
+
+  // сортируем строки каждой линии по дате
+  Object.values(plants).forEach(lines => {
+    Object.values(lines).forEach(rows => {
+      rows.sort((a,b) => new Date(a.date) - new Date(b.date));
+    });
+  });
+
+  return { plants, dates: p.dates, warnings };
+}
+
+function renderReportTab(c) {
+  let html = '<div class="section-title">Отчёт потребности</div>';
+
+  if (!ST.planData) {
+    c.innerHTML = html + emptyState('Сначала загрузите план', 'Перейдите на вкладку «План»');
+    return;
+  }
+
+  const rep = buildReport();
+  const allPlantNames = Object.keys(rep.plants);
+
+  if (!allPlantNames.length) {
+    c.innerHTML = html +
+      '<div class="section-desc">Нет сопоставленных позиций для расчёта.</div>' +
+      emptyState('Отчёт пуст', 'Сопоставьте продукты на вкладке «Маппинг»');
+    return;
+  }
+
+  // Фильтр по заводу
+  if (ST._reportFilter && !allPlantNames.includes(ST._reportFilter)) ST._reportFilter = null;
+  const filter = ST._reportFilter || null;
+  const plantNames = filter ? allPlantNames.filter(p => p === filter) : allPlantNames;
+
+  // Итоги (по отфильтрованным)
+  let grandKegu = 0, grandKetu = 0;
+  plantNames.forEach(pn => Object.values(rep.plants[pn]).forEach(rows =>
+    rows.forEach(r => { grandKegu += r.kegu; grandKetu += r.ketu; })
+  ));
+
+  html += '<div class="section-desc">Период: ' + fmtDate(rep.dates[0]) + ' — ' + fmtDate(rep.dates[rep.dates.length-1]) + '</div>';
+
+  // Кнопки фильтра по заводам
+  if (allPlantNames.length > 1) {
+    html += '<div class="flex" style="flex-wrap:wrap;gap:8px;margin-bottom:14px">';
+    html += '<button class="btn ' + (!filter?'btn-primary':'btn-secondary') + '" style="padding:8px 14px;font-size:13px" onclick="setReportFilter(null)">Все заводы</button>';
+    allPlantNames.forEach(pn => {
+      html += '<button class="btn ' + (filter===pn?'btn-primary':'btn-secondary') + '" style="padding:8px 14px;font-size:13px" onclick="setReportFilter(\'' + cssEsc(pn).replace(/'/g,"\\'") + '\')">' + esc(pn) + '</button>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div class="stat-grid">' +
+    '<div class="stat-box"><div class="stat-label">КЕГУ (блоков)' + (filter?' · '+esc(filter):'') + '</div><div class="stat-value kegu-val">' + fmt(grandKegu) + '</div></div>' +
+    '<div class="stat-box"><div class="stat-label">КЕТУ (палет)' + (filter?' · '+esc(filter):'') + '</div><div class="stat-value ketu-val">' + fmt(grandKetu) + '</div></div>' +
+    '</div>';
+
+  html += '<button class="btn btn-green btn-block mt8" onclick="exportReport()">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+    'Скачать отчёт в Excel' + (filter ? ' (' + esc(filter) + ')' : '') + '</button>';
+
+  html += '<button class="btn btn-secondary btn-block mt8" onclick="copyForTelegram()">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+    'Копировать план для Telegram</button>';
+
+  if (rep.warnings.length) {
+    html += '<div class="card mt16" style="background:rgba(255,59,48,0.08)">' +
+      '<div style="font-size:13px"><b>Предупреждения:</b><br>' +
+      [...new Set(rep.warnings)].map(esc).join('<br>') + '</div></div>';
+  }
+
+  // Таблицы по заводам
+  plantNames.forEach(pn => {
+    // есть ли в этом заводе многолинейные строки (Сайхун)?
+    let hasMulti = false;
+    Object.values(rep.plants[pn]).forEach(rows => rows.forEach(r => { if (r.multiLine) hasMulti = true; }));
+
+    html += '<div class="card-title mt16" style="margin-bottom:8px">🏭 ' + esc(pn) + '</div>';
+    if (hasMulti) {
+      html += '<div class="muted" style="font-size:12px;margin-bottom:6px">Для этого завода можно вручную выбрать линию для каждой позиции.</div>';
+    }
+    const colCount = hasMulti ? 8 : 7;
+    html += '<div class="table-wrap"><table><thead><tr>' +
+      '<th>SKU</th><th>Дата производства</th>' +
+      (hasMulti ? '<th>Линия</th>' : '') +
+      '<th class="num">Блок</th><th class="num">Палета</th>' +
+      '<th class="num">Штук план</th><th class="num">КЕГУ</th><th class="num">КЕТУ</th>' +
+      '</tr></thead><tbody>';
+
+    let plantKegu = 0, plantKetu = 0;
+    Object.keys(rep.plants[pn]).forEach(lineName => {
+      const rows = rep.plants[pn][lineName];
+      html += '<tr class="row-line"><td colspan="' + colCount + '">Линия: ' + esc(lineName) + '</td></tr>';
+      let lineKegu = 0, lineKetu = 0;
+      rows.forEach(r => {
+        lineKegu += r.kegu; lineKetu += r.ketu;
+        let lineCell = '';
+        if (hasMulti) {
+          if (r.multiLine && r.plantLines) {
+            let opts = r.plantLines.map(l =>
+              '<option value="' + cssEsc(l) + '"' + (l===r.curLine?' selected':'') + '>' + esc(l) + '</option>'
+            ).join('');
+            lineCell = '<td><select class="select" style="padding:5px 8px;font-size:12px" ' +
+              'onchange="assignSaihunLine(\'' + cssEsc(r.rowKey).replace(/'/g,"\\'") + '\', this.value)">' + opts + '</select></td>';
+          } else {
+            lineCell = '<td class="muted" style="font-size:12px">' + esc(lineName) + '</td>';
+          }
+        }
+        const skuLabel = r.isMaterial
+          ? esc(r.sku) + ' <span class="badge badge-ignore">материал</span>'
+          : esc(r.sku);
+        const keguCell = r.isMaterial ? '—' : fmt(r.kegu);
+        const ketuCell = r.isMaterial ? '—' : fmt(r.ketu);
+        html += '<tr>' +
+          '<td>' + skuLabel + '</td>' +
+          '<td>' + fmtDate(r.date) + '</td>' +
+          lineCell +
+          '<td class="num">' + r.block + '</td>' +
+          '<td class="num">' + r.pallet + '</td>' +
+          '<td class="num">' + fmt(r.pcs) + '</td>' +
+          '<td class="num kegu-val">' + keguCell + '</td>' +
+          '<td class="num ketu-val">' + ketuCell + '</td>' +
+          '</tr>';
+      });
+      html += '<tr class="row-total"><td colspan="' + (colCount-2) + '">Итого по линии</td>' +
+        '<td class="num kegu-val">' + fmt(lineKegu) + '</td>' +
+        '<td class="num ketu-val">' + fmt(lineKetu) + '</td></tr>';
+      plantKegu += lineKegu; plantKetu += lineKetu;
+    });
+    html += '<tr class="row-plant"><td colspan="' + (colCount-2) + '">ИТОГО ' + esc(pn) + '</td>' +
+      '<td class="num">' + fmt(plantKegu) + '</td>' +
+      '<td class="num">' + fmt(plantKetu) + '</td></tr>';
+    html += '</tbody></table></div>';
+  });
+
+  ST._lastReport = rep;
+  c.innerHTML = html;
+}
+
+// Назначить линию для позиции Сайхуна
+function assignSaihunLine(rowKey, lineName) {
+  ST.saihunSplit[rowKey] = lineName;
+  saveSaihun();
+  toast('Линия назначена');
+  render();
+}
+
+// ─── Экспорт в Excel ───
+function setReportFilter(plant) {
+  ST._reportFilter = plant;
+  render();
+}
+
+function exportReport() {
+  const rep = ST._lastReport || buildReport();
+  if (!rep) { toast('Нет данных'); return; }
+  const filter = ST._reportFilter || null;
+  const plantList = filter ? Object.keys(rep.plants).filter(p=>p===filter) : Object.keys(rep.plants);
+
+  const aoa = [];
+  aoa.push(['ОТЧЁТ ПОТРЕБНОСТИ КЕГУ / КЕТУ']);
+  aoa.push(['Период:', fmtDate(rep.dates[0]) + ' — ' + fmtDate(rep.dates[rep.dates.length-1])]);
+  aoa.push(['Сформирован:', fmtDate(new Date())]);
+  aoa.push([]);
+
+  let gKegu = 0, gKetu = 0;
+  plantList.forEach(pn => {
+    aoa.push(['ЗАВОД: ' + pn]);
+    aoa.push(['SKU', 'Дата производства', 'Кол-во в блоке', 'Кол-во на палете', 'Штук по плану', 'Необходимо КЕГУ', 'Необходимо КЕТУ']);
+    let pKegu = 0, pKetu = 0;
+    Object.keys(rep.plants[pn]).forEach(ln => {
+      aoa.push(['Линия: ' + ln]);
+      let lKegu = 0, lKetu = 0;
+      rep.plants[pn][ln].forEach(r => {
+        const exKegu = r.isMaterial ? '—' : Math.round(r.kegu);
+        const exKetu = r.isMaterial ? '—' : Math.round(r.ketu);
+        const exSku = r.isMaterial ? r.sku + ' (материал)' : r.sku;
+        aoa.push([exSku, fmtDate(r.date), r.block, r.pallet, Math.round(r.pcs), exKegu, exKetu]);
+        lKegu += r.kegu; lKetu += r.ketu;
+      });
+      aoa.push(['Итого по линии', '', '', '', '', Math.round(lKegu), Math.round(lKetu)]);
+      pKegu += lKegu; pKetu += lKetu;
+    });
+    aoa.push(['ИТОГО ' + pn, '', '', '', '', Math.round(pKegu), Math.round(pKetu)]);
+    aoa.push([]);
+    gKegu += pKegu; gKetu += pKetu;
+  });
+  aoa.push(['ОБЩИЙ ИТОГ', '', '', '', '', Math.round(gKegu), Math.round(gKetu)]);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:38},{wch:18},{wch:14},{wch:16},{wch:14},{wch:16},{wch:16}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Расчёт потребности');
+  const fname = 'Расчёт_потребности_' + fmtDate(new Date()).replace(/\./g,'-') + '.xlsx';
+  XLSX.writeFile(wb, fname);
+  toast('Отчёт скачан');
+}
+
+// ─── Копировать план для Telegram ───
+function buildTelegramText() {
+  const p = ST.planData;
+  if (!p) return '';
+  const d0 = fmtDate(p.dates[0]);
+  const d1 = fmtDate(p.dates[p.dates.length-1]);
+  let lines = ['План производства на ' + d0 + ' — ' + d1, ''];
+
+  p.lines.forEach(ln => {
+    // строки этой линии: продукт×дата с количеством > 0
+    const items = [];
+    ln.products.forEach(pr => {
+      pr.qty.forEach((q,i) => {
+        if (q && q > 0) {
+          items.push({ date: p.dates[i], name: pr.name, qty: q, dateIdx: i });
+        }
+      });
+    });
+    if (!items.length) return;
+    // сортировка по дате
+    items.sort((a,b) => a.dateIdx - b.dateIdx);
+    lines.push(ln.name);
+    let prevDate = null;
+    items.forEach(it => {
+      const dateStr = fmtDate(it.date);
+      // если дата та же что у предыдущей строки — не повторяем (пусто)
+      const showDate = (dateStr !== prevDate) ? dateStr : '';
+      prevDate = dateStr;
+      lines.push(showDate + '__' + it.name + ' - ' + fmt(it.qty) + ' шт__');
+    });
+    lines.push('');
+  });
+
+  lines.push('__Прошу иметь ввиду что в процессе производства возможны корректировки.__');
+  return lines.join('\n');
+}
+
+function copyForTelegram() {
+  const text = buildTelegramText();
+  if (!text) { toast('Нет данных плана'); return; }
+  // показываем в модалке с кнопкой копирования
+  let html =
+    '<div class="modal-title">План для Telegram</div>' +
+    '<div class="muted" style="font-size:12px;margin-bottom:10px">Проверьте текст и нажмите «Копировать».</div>' +
+    '<textarea class="input" id="tgText" rows="14" style="resize:vertical;font-family:monospace;font-size:12px;line-height:1.5">' +
+    esc(text) + '</textarea>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-primary btn-block" onclick="doCopyTg()">Копировать в буфер</button>' +
+    '</div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-secondary btn-block" onclick="closeModal()">Закрыть</button>' +
+    '</div>';
+  openModal(html);
+}
+
+function doCopyTg() {
+  const ta = document.getElementById('tgText');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    const ok = document.execCommand('copy');
+    if (ok) { toast('Скопировано в буфер'); }
+    else throw new Error();
+  } catch(e) {
+    // fallback на clipboard API
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(ta.value)
+        .then(() => toast('Скопировано в буфер'))
+        .catch(() => toast('Выделите текст и скопируйте вручную'));
+    } else {
+      toast('Выделите текст и скопируйте вручную');
+    }
+  }
+}
+
+function renderMasterTab(c) {
+  let html = '<div class="section-title"><svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Мастер-данные</div>';
+
+  if (!ST.masterUnlocked) {
+    html += '<div class="section-desc">Раздел защищён паролем. Здесь хранятся данные SKU и справочник заводов/линий.</div>';
+    html += '<div class="card" style="max-width:340px">' +
+      '<div class="field"><label class="field-label">Пароль</label>' +
+      '<input class="input" type="password" id="masterPwd" placeholder="Введите пароль" onkeydown="if(event.key===\'Enter\')unlockMaster()"></div>' +
+      '<button class="btn btn-primary btn-block" onclick="unlockMaster()">Открыть</button>' +
+      '</div>';
+    c.innerHTML = html;
+    setTimeout(()=>{ const e=document.getElementById('masterPwd'); if(e) e.focus(); }, 100);
+    return;
+  }
+
+  html += '<div class="section-desc">Изменения сохраняются автоматически.</div>';
+  html += '<div class="flex" style="margin-bottom:14px">' +
+    '<button class="btn btn-secondary" onclick="lockMaster()">Закрыть раздел</button>' +
+    '</div>';
+
+  // ── РАЗДЕЛ 1: Заводы и линии ──
+  html += '<div class="card-title mt16" style="margin-bottom:8px">🏭 Заводы и линии</div>';
+  html += '<div class="section-desc" style="margin-bottom:10px">Создайте заводы и укажите какие линии к ним относятся. Завод в отчёте определяется по линии из плана.</div>';
+  html += '<button class="btn btn-primary" style="margin-bottom:12px" onclick="editPlant(-1)">+ Новый завод</button>';
+
+  if (!ST.plants.length) {
+    html += '<div class="card" style="background:rgba(255,149,0,0.08)"><div style="font-size:13px">Заводы не созданы. Без них отчёт покажет «Завод не указан».</div></div>';
+  } else {
+    ST.plants.forEach((p,i) => {
+      html += '<div class="card" style="padding:14px 16px">' +
+        '<div class="flex-between">' +
+          '<div><b style="font-size:15px">' + esc(p.name) + '</b>' +
+          '<div class="muted" style="font-size:12px;margin-top:3px">Линии: ' +
+          (p.lines.length ? p.lines.map(esc).join(', ') : '<span style="color:var(--red)">нет линий</span>') + '</div></div>' +
+          '<button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="editPlant(' + i + ')">Изменить</button>' +
+        '</div></div>';
+    });
+  }
+
+  // ── РАЗДЕЛ 2: SKU ──
+  html += '<div class="card-title mt16" style="margin-bottom:8px">📦 SKU — блок и палета</div>';
+  html += '<button class="btn btn-primary" style="margin-bottom:12px" onclick="editSku(-1)">+ Новый SKU</button>';
+  html += '<div class="table-wrap"><table><thead><tr>' +
+    '<th>SKU</th><th class="num">Кол-во в блоке</th><th class="num">Кол-во на палете</th><th></th>' +
+    '</tr></thead><tbody>';
+  ST.master.forEach((m,i) => {
+    html += '<tr>' +
+      '<td><b>' + esc(m.sku) + '</b></td>' +
+      '<td class="num">' + (m.block||'—') + '</td>' +
+      '<td class="num">' + (m.pallet||'—') + '</td>' +
+      '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="editSku(' + i + ')">Изменить</button></td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div class="muted mt8" style="font-size:12px">Всего SKU: ' + ST.master.length + '</div>';
+  c.innerHTML = html;
+}
+
+function unlockMaster() {
+  const pwd = document.getElementById('masterPwd').value;
+  if (pwd === MASTER_PASSWORD) {
+    ST.masterUnlocked = true;
+    toast('Доступ открыт');
+    render();
+  } else {
+    toast('Неверный пароль');
+  }
+}
+function lockMaster() {
+  ST.masterUnlocked = false;
+  render();
+}
+
+// ─── Заводы и линии ───
+function editPlant(idx) {
+  const isNew = idx < 0;
+  const p = isNew ? {name:'', lines:[]} : ST.plants[idx];
+  const known = knownLines();
+  // линии завода что не входят в known (вручную добавленные, напр. для Сайхуна)
+  const extraLines = p.lines.filter(l => !known.some(k => k.toLowerCase() === l.toLowerCase()));
+  const allOptions = [...new Set([...known, ...extraLines])].sort();
+
+  let checks = '';
+  if (allOptions.length) {
+    allOptions.forEach((l,i) => {
+      const checked = p.lines.some(pl => pl.toLowerCase() === l.toLowerCase()) ? 'checked' : '';
+      checks += '<label style="display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-bottom:0.5px solid var(--separator)">' +
+        '<input type="checkbox" class="plant-line-cb" value="' + cssEsc(l) + '" ' + checked + ' style="width:18px;height:18px">' +
+        '<span style="font-size:14px">' + esc(l) + '</span></label>';
+    });
+  } else {
+    checks = '<div class="muted" style="font-size:13px;padding:8px 0">Линий пока нет. Загрузите план — линии появятся здесь. Или добавьте вручную ниже.</div>';
+  }
+
+  let html =
+    '<div class="modal-title">' + (isNew ? 'Новый завод' : 'Изменить завод') + '</div>' +
+    '<div class="field"><label class="field-label">Название завода</label>' +
+      '<input class="input" id="plantName" value="' + cssEsc(p.name) + '" placeholder="напр. Ханабад"></div>' +
+    '<div class="field"><label class="field-label">Линии этого завода</label>' +
+      '<div class="muted" style="font-size:12px;margin-bottom:6px">Отметьте линии из плана. Одна линия может принадлежать только одному заводу.</div>' +
+      '<div id="plantLineChecks" style="max-height:180px;overflow-y:auto;border:1px solid var(--separator);border-radius:10px;padding:4px 12px">' + checks + '</div>' +
+    '</div>' +
+    '<div class="field"><label class="field-label">Добавить линию вручную (для Сайхуна и т.п.)</label>' +
+      '<div style="display:flex;gap:8px">' +
+        '<input class="input" id="plantManualLine" placeholder="название линии" style="flex:1">' +
+        '<button class="btn btn-secondary" onclick="addManualLine()" style="white-space:nowrap">+ Добавить</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-primary btn-block" onclick="savePlant(' + idx + ')">Сохранить</button>' +
+    '</div>';
+  if (!isNew) {
+    html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" style="color:var(--red)" onclick="deletePlant(' + idx + ')">Удалить завод</button></div>';
+  }
+  html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" onclick="closeModal()">Отмена</button></div>';
+  openModal(html);
+}
+
+function addManualLine() {
+  const inp = document.getElementById('plantManualLine');
+  const val = inp.value.trim();
+  if (!val) { toast('Введите название линии'); return; }
+  const box = document.getElementById('plantLineChecks');
+  // убрать заглушку "линий нет"
+  if (box.querySelector('.muted')) box.innerHTML = '';
+  // проверка дубля
+  const exists = [...box.querySelectorAll('.plant-line-cb')].some(cb => cb.value.toLowerCase() === val.toLowerCase());
+  if (exists) { toast('Такая линия уже есть'); inp.value=''; return; }
+  const label = document.createElement('label');
+  label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 0;cursor:pointer;border-bottom:0.5px solid var(--separator)';
+  label.innerHTML = '<input type="checkbox" class="plant-line-cb" value="' + cssEsc(val) + '" checked style="width:18px;height:18px">' +
+    '<span style="font-size:14px">' + esc(val) + '</span>';
+  box.appendChild(label);
+  inp.value = '';
+  toast('Линия добавлена');
+}
+
+async function savePlant(idx) {
+  const name = document.getElementById('plantName').value.trim();
+  const lines = [...document.querySelectorAll('.plant-line-cb')]
+    .filter(cb => cb.checked).map(cb => cb.value);
+  if (!name) { toast('Введите название завода'); return; }
+  const obj = { name, lines };
+  if (idx < 0) ST.plants.push(obj);
+  else ST.plants[idx] = obj;
+  savePlants();
+  closeModal();
+  await syncPlants();
+  toast('Завод сохранён');
+  render();
+}
+
+async function deletePlant(idx) {
+  if (!confirm('Удалить завод «' + ST.plants[idx].name + '»?')) return;
+  ST.plants.splice(idx, 1);
+  savePlants();
+  closeModal();
+  await syncPlants();
+  toast('Завод удалён');
+  render();
+}
+
+// ─── SKU ───
+function editSku(idx) {
+  const isNew = idx < 0;
+  const m = isNew ? {sku:'',block:6,pallet:100,type:'гп'} : ST.master[idx];
+  const isMat = (m.type === 'материал');
+
+  let html =
+    '<div class="modal-title">' + (isNew ? 'Новый SKU' : 'Изменить SKU') + '</div>' +
+    '<div class="field"><label class="field-label">Название SKU</label>' +
+      '<input class="input" id="skuName" value="' + cssEsc(m.sku) + '"></div>' +
+    '<div class="flex">' +
+      '<div class="field" style="flex:1"><label class="field-label">Кол-во в блоке</label>' +
+        '<input class="input" id="skuBlock" type="number" min="1" value="' + (m.block||'') + '"></div>' +
+      '<div class="field" style="flex:1"><label class="field-label">Кол-во на палете</label>' +
+        '<input class="input" id="skuPallet" type="number" min="1" value="' + (m.pallet||'') + '"></div>' +
+    '</div>' +
+    '<div class="field"><label class="field-label">Тип</label>' +
+      '<select class="select" id="skuType">' +
+        '<option value="гп"' + (!isMat?' selected':'') + '>ГП — готовая продукция (считается КЕГУ/КЕТУ)</option>' +
+        '<option value="материал"' + (isMat?' selected':'') + '>Материал (БИБ и т.п. — без расчёта КЕГУ/КЕТУ)</option>' +
+      '</select></div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-primary btn-block" onclick="saveSku(' + idx + ')">Сохранить</button>' +
+    '</div>';
+  if (!isNew) {
+    html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" style="color:var(--red)" onclick="deleteSku(' + idx + ')">Удалить SKU</button></div>';
+  }
+  html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" onclick="closeModal()">Отмена</button></div>';
+  openModal(html);
+}
+
+async function saveSku(idx) {
+  const sku = document.getElementById('skuName').value.trim();
+  const block = parseInt(document.getElementById('skuBlock').value) || 0;
+  const pallet = parseInt(document.getElementById('skuPallet').value) || 0;
+  const type = document.getElementById('skuType').value === 'материал' ? 'материал' : 'гп';
+  if (!sku) { toast('Введите название SKU'); return; }
+  if (!block || !pallet) { toast('Укажите блок и палету'); return; }
+
+  const obj = { sku, block, pallet, type };
+  if (idx < 0) ST.master.push(obj);
+  else ST.master[idx] = obj;
+  saveMaster();
+  closeModal();
+  await syncSku();
+  toast('SKU сохранён');
+  render();
+}
+
+async function deleteSku(idx) {
+  if (!confirm('Удалить SKU «' + ST.master[idx].sku + '»?')) return;
+  ST.master.splice(idx, 1);
+  saveMaster();
+  closeModal();
+  await syncSku();
+  toast('SKU удалён');
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ВКЛАДКА «ПОЛЬЗОВАТЕЛИ»
+// ═══════════════════════════════════════════════════════════
+function renderUsersTab(c) {
+  const canEdit = userCanEdit('users');
+  let html = '<div class="section-title">Пользователи и доступы</div>';
+  html += '<div class="section-desc">Управление учётками и правами доступа к разделам.</div>';
+
+  if (!SCRIPT_URL) {
+    html += '<div class="card" style="background:rgba(255,149,0,0.08)">' +
+      '<div style="font-size:13px">Запись в таблицу пока не настроена. Изменения сохраняются локально. ' +
+      'Чтобы пользователи синхронизировались — настройте Apps Script (см. инструкцию).</div></div>';
+  }
+
+  if (canEdit) {
+    html += '<button class="btn btn-primary" style="margin-bottom:14px" onclick="editUser(-1)">+ Новый пользователь</button>';
+  }
+
+  if (!ST.users.length) {
+    html += emptyState('Пользователей нет', canEdit ? 'Добавьте первого пользователя' : 'Список пуст');
+    c.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="table-wrap"><table><thead><tr>' +
+    '<th>Логин</th><th>Имя</th><th>Доступы</th>' + (canEdit?'<th></th>':'') +
+    '</tr></thead><tbody>';
+  ST.users.forEach((u,i) => {
+    const accTxt = ALL_TABS.filter(t => u.access[t.id] && u.access[t.id]!=='none')
+      .map(t => {
+        const lvl = u.access[t.id];
+        const color = lvl==='edit' ? 'badge-mapped' : 'badge-ignore';
+        return '<span class="badge ' + color + '" style="margin:2px">' + esc(t.name) +
+               ': ' + (lvl==='edit'?'ред.':'просм.') + '</span>';
+      }).join(' ');
+    html += '<tr>' +
+      '<td><b>' + esc(u.login) + '</b></td>' +
+      '<td>' + esc(u.name) + '</td>' +
+      '<td>' + (accTxt||'<span class="muted">нет</span>') + '</td>' +
+      (canEdit ? '<td><button class="btn btn-secondary" style="padding:6px 12px;font-size:13px" onclick="editUser(' + i + ')">Изменить</button></td>' : '') +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  c.innerHTML = html;
+}
+
+function editUser(idx) {
+  const isNew = idx < 0;
+  const u = isNew ? {login:'',password:'',name:'',access:{}} : ST.users[idx];
+
+  let accessRows = '';
+  ALL_TABS.forEach(t => {
+    const lvl = u.access[t.id] || 'none';
+    accessRows +=
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--separator)">' +
+        '<span style="font-size:14px;font-weight:600">' + esc(t.name) + '</span>' +
+        '<select class="select user-access" data-tab="' + t.id + '" style="width:150px;padding:6px 8px;font-size:13px">' +
+          '<option value="none"' + (lvl==='none'?' selected':'') + '>Нет доступа</option>' +
+          '<option value="view"' + (lvl==='view'?' selected':'') + '>Просмотр</option>' +
+          '<option value="edit"' + (lvl==='edit'?' selected':'') + '>Изменение</option>' +
+        '</select>' +
+      '</div>';
+  });
+
+  let html =
+    '<div class="modal-title">' + (isNew ? 'Новый пользователь' : 'Изменить пользователя') + '</div>' +
+    '<div class="field"><label class="field-label">Логин</label>' +
+      '<input class="input" id="userLogin" value="' + cssEsc(u.login) + '"></div>' +
+    '<div class="field"><label class="field-label">Пароль</label>' +
+      '<input class="input" id="userPass" value="' + cssEsc(u.password) + '"></div>' +
+    '<div class="field"><label class="field-label">Имя</label>' +
+      '<input class="input" id="userName" value="' + cssEsc(u.name) + '"></div>' +
+    '<div class="field"><label class="field-label">Доступ к разделам</label>' +
+      '<div style="border:1px solid var(--separator);border-radius:10px;padding:4px 14px">' + accessRows + '</div>' +
+    '</div>' +
+    '<div class="flex mt8">' +
+      '<button class="btn btn-primary btn-block" onclick="saveUser(' + idx + ')">Сохранить</button>' +
+    '</div>';
+  if (!isNew) {
+    html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" style="color:var(--red)" onclick="deleteUser(' + idx + ')">Удалить пользователя</button></div>';
+  }
+  html += '<div class="flex mt8"><button class="btn btn-secondary btn-block" onclick="closeModal()">Отмена</button></div>';
+  openModal(html);
+}
+
+function collectUserAccess() {
+  const access = {};
+  document.querySelectorAll('.user-access').forEach(sel => {
+    const tab = sel.getAttribute('data-tab');
+    const lvl = sel.value;
+    if (lvl && lvl !== 'none') access[tab] = lvl;
+  });
+  return access;
+}
+
+async function saveUser(idx) {
+  const login = document.getElementById('userLogin').value.trim();
+  const password = document.getElementById('userPass').value.trim();
+  const name = document.getElementById('userName').value.trim();
+  const access = collectUserAccess();
+  if (!login) { toast('Введите логин'); return; }
+  if (!password) { toast('Введите пароль'); return; }
+
+  const obj = { login, password, name: name||login, access };
+  if (idx < 0) {
+    // проверка дубля логина
+    if (ST.users.some(x => x.login.toLowerCase() === login.toLowerCase())) {
+      toast('Такой логин уже существует'); return;
+    }
+    ST.users.push(obj);
+  } else {
+    ST.users[idx] = obj;
+  }
+  closeModal();
+  await syncUsers();
+  toast('Пользователь сохранён');
+  render();
+}
+
+async function deleteUser(idx) {
+  if (!confirm('Удалить пользователя «' + ST.users[idx].login + '»?')) return;
+  ST.users.splice(idx, 1);
+  closeModal();
+  await syncUsers();
+  toast('Пользователь удалён');
+  render();
+}
+
+// Записать всех пользователей в таблицу
+async function syncUsers() {
+  const rows = ST.users.map(u => {
+    const accStr = ALL_TABS
+      .filter(t => u.access[t.id] && u.access[t.id]!=='none')
+      .map(t => t.id + ':' + u.access[t.id])
+      .join(', ');
+    return [u.login, u.password, u.name, accStr];
+  });
+  await writeToSheet('users', rows);
+}
+
+// Записать SKU в таблицу
+async function syncSku() {
+  const rows = ST.master.map(m => [m.sku, m.block, m.pallet, m.type==='материал'?'Материал':'ГП']);
+  await writeToSheet('sku', rows);
+}
+// Записать заводы (каждая линия — отдельная строка)
+async function syncPlants() {
+  const rows = [];
+  ST.plants.forEach(p => {
+    if (!p.lines.length) { rows.push([p.name, '']); }
+    else p.lines.forEach(l => rows.push([p.name, l]));
+  });
+  await writeToSheet('plants', rows);
+}
+// Записать маппинг
+async function syncMappingToSheet() {
+  const rows = [];
+  Object.keys(ST.mapping).forEach(planName => {
+    const m = ST.mapping[planName];
+    if (m === 'ignore') { rows.push([planName, 'ignore', '']); }
+    else if (Array.isArray(m)) {
+      m.forEach(x => rows.push([planName, x.sku, Math.round((x.share||1)*100)]));
+    }
+  });
+  await writeToSheet('mapping', rows);
+}
+
+
+loadLocal();
+render();
+
+// Подгружаем данные из Google-таблицы
+(async function initCloud() {
+  try {
+    const res = await loadFromCloud();
+    console.log('Облако загружено:', res);
+    if (res.fail.length) {
+      toast('Часть данных не загрузилась: ' + res.fail.join(', '));
+    } else {
+      toast('Данные из таблицы загружены');
+    }
+  } catch(e) {
+    console.error('Ошибка загрузки облака', e);
+    toast('Не удалось подключиться к таблице — работаем локально');
+  }
+  render();
+  updateUserBadge();
+})();
+</script>
+</body>
+</html>
