@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Расчёт потребности — КЕГУ/КЕТУ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Расчёт потр.">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
@@ -716,7 +721,7 @@ async function loadFromCloud() {
     results.ok.push('SKU (' + arr.length + ')');
   } catch(e) { results.fail.push('SKU'); }
 
-  // Заводы
+  // Заводы — облако всегда главнее локального кэша
   try {
     const rows = await fetchSheet(SHEET_PLANTS);
     const byPlant = {};
@@ -729,7 +734,9 @@ async function loadFromCloud() {
       if (line) byPlant[plant].lines.push(line);
     }
     const arr = Object.values(byPlant);
-    if (arr.length) { ST.plants = arr; savePlants(); }
+    // применяем ВСЕГДА (даже пустой) — таблица это источник правды
+    ST.plants = arr;
+    savePlants();
     results.ok.push('Заводы (' + arr.length + ')');
   } catch(e) { results.fail.push('Заводы'); }
 
@@ -966,6 +973,10 @@ function doLogin() {
   }
   if (!u) { toast('Неверный логин или пароль'); return; }
   ST.currentUser = u;
+  // сохраняем сессию — чтобы вход держался при обновлении страницы
+  try {
+    localStorage.setItem('calc_session', JSON.stringify({ login: u.login, password: u.password }));
+  } catch(e) {}
   const firstOk = ALL_TABS.find(t => (u.access[t.id] && u.access[t.id] !== 'none'));
   ST.tab = firstOk ? firstOk.id : 'home';
   toast('Добро пожаловать, ' + u.name);
@@ -976,8 +987,28 @@ function doLogin() {
 function doLogout() {
   ST.currentUser = null;
   ST.tab = 'home';
+  try { localStorage.removeItem('calc_session'); } catch(e) {}
   render();
   updateUserBadge();
+}
+
+// Восстановить сессию из localStorage (вызывается после загрузки пользователей)
+function restoreSession() {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem('calc_session') || 'null');
+  } catch(e) { return; }
+  if (!saved || !saved.login) return;
+  // встроенный админ
+  if (saved.login.toLowerCase() === BUILTIN_ADMIN.login.toLowerCase() &&
+      saved.password === BUILTIN_ADMIN.password) {
+    ST.currentUser = BUILTIN_ADMIN;
+    return;
+  }
+  // обычный пользователь — ищем в загруженном списке
+  const u = ST.users.find(x =>
+    x.login.toLowerCase() === saved.login.toLowerCase() && x.password === saved.password);
+  if (u) ST.currentUser = u;
 }
 
 function updateUserBadge() {
@@ -1528,7 +1559,46 @@ function buildReport() {
     });
   });
 
-  return { plants, dates: p.dates, warnings };
+  // ── Расчёт остатков после плана ──
+  // КЕГУ: у каждого SKU свой остаток, расходуется накопительно по датам
+  // КЕТУ: общий остаток на всё, расходуется накопительно
+  const keguLeft = {};   // {sku: текущий остаток КЕГУ}
+  ST.master.forEach(m => {
+    const st = ST.stock[m.sku];
+    keguLeft[m.sku] = st ? st.kegu : 0;
+  });
+  // глобальный КЕТУ — берём из остатков (одинаков для всех строк)
+  let ketuLeft = 0;
+  const stockVals = Object.values(ST.stock);
+  if (stockVals.length) ketuLeft = stockVals[0].ketu || 0;
+
+  // собираем все строки в один список, сортируем по дате — расход по хронологии
+  const allRows = [];
+  Object.values(plants).forEach(lines => {
+    Object.values(lines).forEach(rows => rows.forEach(r => allRows.push(r)));
+  });
+  allRows.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+  allRows.forEach(r => {
+    if (r.isMaterial) {
+      // материал не расходует стикеры
+      r.keguBefore = null; r.keguAfter = null;
+      r.ketuBefore = null; r.ketuAfter = null;
+      return;
+    }
+    // КЕГУ
+    const kb = (keguLeft[r.sku] != null) ? keguLeft[r.sku] : 0;
+    r.keguBefore = kb;
+    r.keguAfter = kb - r.kegu;
+    keguLeft[r.sku] = r.keguAfter;
+    // КЕТУ (глобальный)
+    r.ketuBefore = ketuLeft;
+    r.ketuAfter = ketuLeft - r.ketu;
+    ketuLeft = r.ketuAfter;
+  });
+
+  return { plants, dates: p.dates, warnings,
+           stockStart: { kegu: {...keguLeft}, ketu: ketuLeft } };
 }
 
 function renderReportTab(c) {
@@ -1591,6 +1661,37 @@ function renderReportTab(c) {
       [...new Set(rep.warnings)].map(esc).join('<br>') + '</div></div>';
   }
 
+  // ── Блок дефицита: где остатка не хватает ──
+  const deficit = {};  // {sku: минимальный (самый отрицательный) остаток}
+  let ketuMin = null;
+  plantNames.forEach(pn => Object.values(rep.plants[pn]).forEach(rows => rows.forEach(r => {
+    if (r.isMaterial) return;
+    if (r.keguAfter != null && r.keguAfter < 0) {
+      if (deficit[r.sku] == null || r.keguAfter < deficit[r.sku]) deficit[r.sku] = r.keguAfter;
+    }
+    if (r.ketuAfter != null && (ketuMin == null || r.ketuAfter < ketuMin)) ketuMin = r.ketuAfter;
+  })));
+  const deficitSkus = Object.keys(deficit);
+  if (deficitSkus.length || (ketuMin != null && ketuMin < 0)) {
+    html += '<div class="card mt16" style="background:rgba(255,149,0,0.1);border:1px solid var(--orange)">';
+    html += '<div class="card-title" style="color:var(--orange)">⚠ Требуется заказ стикеров</div>';
+    html += '<div style="font-size:13px;margin-bottom:8px">Остатка не хватает на план. Нужно дозаказать:</div>';
+    if (deficitSkus.length) {
+      html += '<table style="width:100%;font-size:13px"><thead><tr>' +
+        '<th style="text-align:left;padding:4px">SKU (КЕГУ)</th><th style="text-align:right;padding:4px">Не хватает</th></tr></thead><tbody>';
+      deficitSkus.forEach(sku => {
+        html += '<tr><td style="padding:4px">' + esc(sku) + '</td>' +
+          '<td style="text-align:right;padding:4px" class="neg"><b>' + fmt(Math.abs(deficit[sku])) + '</b></td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    if (ketuMin != null && ketuMin < 0) {
+      html += '<div style="font-size:13px;margin-top:8px">КЕТУ (общий): не хватает <b class="neg">' +
+        fmt(Math.abs(ketuMin)) + '</b> палет</div>';
+    }
+    html += '</div>';
+  }
+
   // Таблицы по заводам
   plantNames.forEach(pn => {
     // есть ли в этом заводе многолинейные строки (Сайхун)?
@@ -1601,12 +1702,13 @@ function renderReportTab(c) {
     if (hasMulti) {
       html += '<div class="muted" style="font-size:12px;margin-bottom:6px">Для этого завода можно вручную выбрать линию для каждой позиции.</div>';
     }
-    const colCount = hasMulti ? 8 : 7;
+    const colCount = hasMulti ? 10 : 9;
     html += '<div class="table-wrap"><table><thead><tr>' +
       '<th>SKU</th><th>Дата производства</th>' +
       (hasMulti ? '<th>Линия</th>' : '') +
       '<th class="num">Блок</th><th class="num">Палета</th>' +
       '<th class="num">Штук план</th><th class="num">КЕГУ</th><th class="num">КЕТУ</th>' +
+      '<th class="num">Остаток КЕГУ</th><th class="num">Остаток КЕТУ</th>' +
       '</tr></thead><tbody>';
 
     let plantKegu = 0, plantKetu = 0;
@@ -1633,6 +1735,18 @@ function renderReportTab(c) {
           : esc(r.sku);
         const keguCell = r.isMaterial ? '—' : fmt(r.kegu);
         const ketuCell = r.isMaterial ? '—' : fmt(r.ketu);
+        // остаток после плана — с подсветкой нехватки
+        let keguAfterCell, ketuAfterCell;
+        if (r.isMaterial) {
+          keguAfterCell = '—'; ketuAfterCell = '—';
+        } else {
+          const kNeg = r.keguAfter < 0;
+          const tNeg = r.ketuAfter < 0;
+          keguAfterCell = '<span class="' + (kNeg?'neg':'') + '">' + fmt(r.keguAfter) +
+            (kNeg ? ' ⚠' : '') + '</span>';
+          ketuAfterCell = '<span class="' + (tNeg?'neg':'') + '">' + fmt(r.ketuAfter) +
+            (tNeg ? ' ⚠' : '') + '</span>';
+        }
         html += '<tr>' +
           '<td>' + skuLabel + '</td>' +
           '<td>' + fmtDate(r.date) + '</td>' +
@@ -1642,16 +1756,20 @@ function renderReportTab(c) {
           '<td class="num">' + fmt(r.pcs) + '</td>' +
           '<td class="num kegu-val">' + keguCell + '</td>' +
           '<td class="num ketu-val">' + ketuCell + '</td>' +
+          '<td class="num">' + keguAfterCell + '</td>' +
+          '<td class="num">' + ketuAfterCell + '</td>' +
           '</tr>';
       });
-      html += '<tr class="row-total"><td colspan="' + (colCount-2) + '">Итого по линии</td>' +
+      html += '<tr class="row-total"><td colspan="' + (colCount-4) + '">Итого по линии</td>' +
         '<td class="num kegu-val">' + fmt(lineKegu) + '</td>' +
-        '<td class="num ketu-val">' + fmt(lineKetu) + '</td></tr>';
+        '<td class="num ketu-val">' + fmt(lineKetu) + '</td>' +
+        '<td colspan="2"></td></tr>';
       plantKegu += lineKegu; plantKetu += lineKetu;
     });
-    html += '<tr class="row-plant"><td colspan="' + (colCount-2) + '">ИТОГО ' + esc(pn) + '</td>' +
+    html += '<tr class="row-plant"><td colspan="' + (colCount-4) + '">ИТОГО ' + esc(pn) + '</td>' +
       '<td class="num">' + fmt(plantKegu) + '</td>' +
-      '<td class="num">' + fmt(plantKetu) + '</td></tr>';
+      '<td class="num">' + fmt(plantKetu) + '</td>' +
+      '<td colspan="2"></td></tr>';
     html += '</tbody></table></div>';
   });
 
@@ -1688,7 +1806,8 @@ function exportReport() {
   let gKegu = 0, gKetu = 0;
   plantList.forEach(pn => {
     aoa.push(['ЗАВОД: ' + pn]);
-    aoa.push(['SKU', 'Дата производства', 'Кол-во в блоке', 'Кол-во на палете', 'Штук по плану', 'Необходимо КЕГУ', 'Необходимо КЕТУ']);
+    aoa.push(['SKU', 'Дата производства', 'Кол-во в блоке', 'Кол-во на палете', 'Штук по плану',
+              'Необходимо КЕГУ', 'Необходимо КЕТУ', 'Остаток КЕГУ после', 'Остаток КЕТУ после']);
     let pKegu = 0, pKetu = 0;
     Object.keys(rep.plants[pn]).forEach(ln => {
       aoa.push(['Линия: ' + ln]);
@@ -1697,20 +1816,23 @@ function exportReport() {
         const exKegu = r.isMaterial ? '—' : Math.round(r.kegu);
         const exKetu = r.isMaterial ? '—' : Math.round(r.ketu);
         const exSku = r.isMaterial ? r.sku + ' (материал)' : r.sku;
-        aoa.push([exSku, fmtDate(r.date), r.block, r.pallet, Math.round(r.pcs), exKegu, exKetu]);
+        const exKeguAfter = (r.isMaterial || r.keguAfter==null) ? '—' : Math.round(r.keguAfter);
+        const exKetuAfter = (r.isMaterial || r.ketuAfter==null) ? '—' : Math.round(r.ketuAfter);
+        aoa.push([exSku, fmtDate(r.date), r.block, r.pallet, Math.round(r.pcs),
+                  exKegu, exKetu, exKeguAfter, exKetuAfter]);
         lKegu += r.kegu; lKetu += r.ketu;
       });
-      aoa.push(['Итого по линии', '', '', '', '', Math.round(lKegu), Math.round(lKetu)]);
+      aoa.push(['Итого по линии', '', '', '', '', Math.round(lKegu), Math.round(lKetu), '', '']);
       pKegu += lKegu; pKetu += lKetu;
     });
-    aoa.push(['ИТОГО ' + pn, '', '', '', '', Math.round(pKegu), Math.round(pKetu)]);
+    aoa.push(['ИТОГО ' + pn, '', '', '', '', Math.round(pKegu), Math.round(pKetu), '', '']);
     aoa.push([]);
     gKegu += pKegu; gKetu += pKetu;
   });
-  aoa.push(['ОБЩИЙ ИТОГ', '', '', '', '', Math.round(gKegu), Math.round(gKetu)]);
+  aoa.push(['ОБЩИЙ ИТОГ', '', '', '', '', Math.round(gKegu), Math.round(gKetu), '', '']);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:38},{wch:18},{wch:14},{wch:16},{wch:14},{wch:16},{wch:16}];
+  ws['!cols'] = [{wch:38},{wch:18},{wch:14},{wch:16},{wch:14},{wch:16},{wch:16},{wch:18},{wch:18}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Расчёт потребности');
   const fname = 'Расчёт_потребности_' + fmtDate(new Date()).replace(/\./g,'-') + '.xlsx';
@@ -2201,6 +2323,8 @@ render();
     console.error('Ошибка загрузки облака', e);
     toast('Не удалось подключиться к таблице — работаем локально');
   }
+  // восстанавливаем сессию (после того как пользователи загружены)
+  restoreSession();
   render();
   updateUserBadge();
 })();
