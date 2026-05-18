@@ -540,7 +540,6 @@ async function writeToSheet(sheetKey, rows) {
     body.set('sheet', sheetKey);
     body.set('data', JSON.stringify(rows));
     await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body });
-    // в режиме no-cors ответ не читается — считаем что ок
     return true;
   } catch(e) {
     console.error('writeToSheet error', e);
@@ -548,6 +547,49 @@ async function writeToSheet(sheetKey, rows) {
     return false;
   }
 }
+
+// Сохранить снимок плана в облако (через Apps Script)
+async function savePlanToCloud() {
+  if (!SCRIPT_URL || !ST.planData) return false;
+  try {
+    const body = new URLSearchParams();
+    body.set('action', 'savePlan');
+    body.set('data', JSON.stringify(ST.planData));
+    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body });
+    return true;
+  } catch(e) {
+    console.error('savePlanToCloud error', e);
+    return false;
+  }
+}
+
+// Загрузить снимок плана из облака
+async function loadPlanFromCloud() {
+  if (!SCRIPT_URL) return false;
+  try {
+    const resp = await fetch(SCRIPT_URL + '?action=getPlan');
+    const json = await resp.json();
+    if (json.ok && json.data) {
+      const pd = JSON.parse(json.data);
+      // даты приходят строками — конвертируем обратно в Date
+      if (pd.dates) pd.dates = pd.dates.map(d => new Date(d));
+      ST.planData = pd;
+      return true;
+    }
+  } catch(e) {
+    console.error('loadPlanFromCloud error', e);
+  }
+  return false;
+}
+
+// Встроенный администратор (работает всегда, даже если таблица недоступна)
+const BUILTIN_ADMIN = {
+  login: 'Admin',
+  password: 'admin1991',
+  name: 'Администратор',
+  access: { home:'edit', plan:'edit', report:'edit', mapping:'edit', master:'edit', users:'edit' },
+  builtin: true
+};
 
 // все вкладки для прав доступа
 const ALL_TABS = [
@@ -827,8 +869,6 @@ function switchTab(tab) {
 
 // Уровень доступа пользователя к вкладке: 'none' | 'view' | 'edit'
 function userAccessLevel(tab) {
-  // если пользователей нет — полный доступ (первичная настройка)
-  if (!ST.users.length) return 'edit';
   if (!ST.currentUser) return 'none';
   const acc = ST.currentUser.access || {};
   return acc[tab] || 'none';
@@ -852,8 +892,8 @@ function refreshTabbar() {
 
 function render() {
   const c = document.getElementById('content');
-  // экран входа: если есть пользователи и никто не вошёл
-  if (ST.users.length && !ST.currentUser) {
+  // экран входа: пока никто не вошёл (встроенный админ работает всегда)
+  if (!ST.currentUser) {
     renderLogin(c);
     return;
   }
@@ -900,10 +940,15 @@ function renderLogin(c) {
 function doLogin() {
   const login = document.getElementById('loginInput').value.trim();
   const pass = document.getElementById('passInput').value;
-  const u = ST.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.password === pass);
+  // встроенный админ — работает всегда
+  let u = null;
+  if (login.toLowerCase() === BUILTIN_ADMIN.login.toLowerCase() && pass === BUILTIN_ADMIN.password) {
+    u = BUILTIN_ADMIN;
+  } else {
+    u = ST.users.find(x => x.login.toLowerCase() === login.toLowerCase() && x.password === pass);
+  }
   if (!u) { toast('Неверный логин или пароль'); return; }
   ST.currentUser = u;
-  // первая доступная вкладка
   const firstOk = ALL_TABS.find(t => (u.access[t.id] && u.access[t.id] !== 'none'));
   ST.tab = firstOk ? firstOk.id : 'home';
   toast('Добро пожаловать, ' + u.name);
@@ -992,30 +1037,45 @@ function renderHomeTab(c) {
 //  ВКЛАДКА «ПЛАН» — загрузка файла
 // ═══════════════════════════════════════════════════════════
 function renderPlanTab(c) {
+  const canEdit = userCanEdit('plan');
   let html =
-    '<div class="section-title">Загрузка плана производства</div>' +
-    '<div class="section-desc">Загрузите файл «План производства расчёт». Инструмент прочитает лист «План».</div>';
+    '<div class="section-title">План производства</div>';
+
+  if (canEdit) {
+    html += '<div class="section-desc">Загрузите файл «План производства расчёт» — он опубликуется для всех пользователей.</div>';
+  } else {
+    html += '<div class="section-desc">Просмотр опубликованного плана. Загрузку выполняет ответственный пользователь.</div>';
+  }
+
+  // кнопка обновления плана из облака — для всех
+  html += '<button class="btn btn-secondary" style="margin-bottom:14px" onclick="refreshPlanFromCloud()">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+    'Обновить план из облака</button>';
 
   if (!ST.planData) {
-    html +=
-      '<div class="upload-zone" id="uploadZone" onclick="document.getElementById(\'fileInput\').click()">' +
-        '<div class="upload-icon">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+    if (canEdit) {
+      html +=
+        '<div class="upload-zone" id="uploadZone" onclick="document.getElementById(\'fileInput\').click()">' +
+          '<div class="upload-icon">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+          '</div>' +
+          '<div class="upload-title">Нажмите чтобы выбрать файл</div>' +
+          '<div class="upload-hint">или перетащите .xlsx сюда</div>' +
         '</div>' +
-        '<div class="upload-title">Нажмите чтобы выбрать файл</div>' +
-        '<div class="upload-hint">или перетащите .xlsx сюда</div>' +
-      '</div>' +
-      '<input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" class="hidden">';
+        '<input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm" class="hidden">';
+    } else {
+      html += emptyState('План ещё не загружен', 'Ответственный пользователь пока не опубликовал план');
+    }
   } else {
     const p = ST.planData;
     html +=
       '<div class="card">' +
         '<div class="flex-between">' +
           '<div>' +
-            '<div class="card-title">Файл загружен ✓</div>' +
+            '<div class="card-title">План загружен ✓</div>' +
             '<div class="muted" style="font-size:13px">Период: ' + fmtDate(p.dates[0]) + ' — ' + fmtDate(p.dates[p.dates.length-1]) + ' · ' + p.dates.length + ' дн.</div>' +
           '</div>' +
-          '<button class="btn btn-secondary" onclick="resetPlan()">Заменить</button>' +
+          (canEdit ? '<button class="btn btn-secondary" onclick="resetPlan()">Заменить</button>' : '') +
         '</div>' +
       '</div>';
 
@@ -1114,6 +1174,17 @@ function resetPlan() {
   render();
 }
 
+async function refreshPlanFromCloud() {
+  toast('Загрузка плана из облака...');
+  const ok = await loadPlanFromCloud();
+  if (ok) {
+    toast('План обновлён');
+  } else {
+    toast('В облаке пока нет опубликованного плана');
+  }
+  render();
+}
+
 // ═══════════════════════════════════════════════════════════
 //  ПАРСЕР ФАЙЛА «ПЛАН»
 // ═══════════════════════════════════════════════════════════
@@ -1135,6 +1206,10 @@ function handleFile(file) {
       rememberLines();
       toast('План загружен: ' + planData.dates.length + ' дней');
       render();
+      // публикуем план в облако — увидят все пользователи
+      savePlanToCloud().then(ok => {
+        if (ok) toast('План опубликован для всех');
+      });
     } catch(err) {
       console.error(err);
       toast('Ошибка чтения файла: ' + err.message);
@@ -2098,6 +2173,8 @@ render();
   try {
     const res = await loadFromCloud();
     console.log('Облако загружено:', res);
+    // подгружаем опубликованный план
+    await loadPlanFromCloud();
     if (res.fail.length) {
       toast('Часть данных не загрузилась: ' + res.fail.join(', '));
     } else {
