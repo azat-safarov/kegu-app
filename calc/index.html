@@ -526,37 +526,55 @@ const SHEET_STOCK   = 'Отчет остатока кегу-кету';
 // URL Apps Script для записи в таблицу.
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzI4nJIcgWEDWzoKqPbxmssQkBay5gUWzuS9b6xRIhIX3Mxp42Yk7Pg6TTGADnNKXX6/exec';
 
-// Записать данные в лист таблицы через Apps Script
-// sheetKey: 'sku' | 'plants' | 'mapping' | 'users'
-// rows: массив массивов (строки без заголовка)
+// Записать данные в лист таблицы через Apps Script.
+// Используем GET с параметрами в URL — надёжно доходит до Apps Script.
 async function writeToSheet(sheetKey, rows) {
   if (!SCRIPT_URL) {
-    toast('Запись в таблицу не настроена — сохранено локально');
+    toast('Запись в таблицу не настроена');
     return false;
   }
   try {
-    const body = new URLSearchParams();
-    body.set('action', 'replace');
-    body.set('sheet', sheetKey);
-    body.set('data', JSON.stringify(rows));
-    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body });
-    return true;
+    const dataStr = JSON.stringify(rows);
+    const url = SCRIPT_URL + '?action=replace&sheet=' + encodeURIComponent(sheetKey) +
+                '&data=' + encodeURIComponent(dataStr);
+    // если URL не слишком длинный — GET (видим ответ), иначе POST no-cors
+    if (url.length < 7500) {
+      const resp = await fetch(url);
+      const json = await resp.json();
+      if (!json.ok) { console.error('write error', json.error); toast('Ошибка записи: ' + json.error); return false; }
+      return true;
+    } else {
+      // большие данные — POST с text/plain
+      const payload = JSON.stringify({ action:'replace', sheet:sheetKey, data:dataStr });
+      const resp = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      const json = await resp.json();
+      return !!json.ok;
+    }
   } catch(e) {
     console.error('writeToSheet error', e);
-    toast('Ошибка записи в таблицу');
+    toast('Ошибка соединения с таблицей');
     return false;
   }
 }
 
-// Сохранить снимок плана в облако (через Apps Script)
+// Сохранить снимок плана в облако
 async function savePlanToCloud() {
   if (!SCRIPT_URL || !ST.planData) return false;
   try {
-    const body = new URLSearchParams();
-    body.set('action', 'savePlan');
-    body.set('data', JSON.stringify(ST.planData));
-    await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', body });
-    return true;
+    // POST с text/plain — Apps Script принимает без CORS-проблем,
+    // данные читаются в e.postData.contents
+    const payload = JSON.stringify({ action:'savePlan', data: JSON.stringify(ST.planData) });
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload
+    });
+    const json = await resp.json();
+    return !!json.ok;
   } catch(e) {
     console.error('savePlanToCloud error', e);
     return false;
@@ -571,7 +589,6 @@ async function loadPlanFromCloud() {
     const json = await resp.json();
     if (json.ok && json.data) {
       const pd = JSON.parse(json.data);
-      // даты приходят строками — конвертируем обратно в Date
       if (pd.dates) pd.dates = pd.dates.map(d => new Date(d));
       ST.planData = pd;
       return true;
